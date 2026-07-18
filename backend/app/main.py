@@ -3,15 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.database import Base, engine
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-
+# Modeller tablo oluşturma sırasında SQLAlchemy tarafından görülsün
 from app.models.user import User
-from app.schemas.user_schema import UserRoleUpdate
-
 from app.models.employee import Employee
 from app.models.leave_request import LeaveRequest
-from app.models.user import User
 
 from app.routers.auth_router import router as auth_router
 from app.routers.dashboard_router import router as dashboard_router
@@ -19,19 +14,27 @@ from app.routers.employee_router import router as employee_router
 from app.routers.leave_router import router as leave_router
 
 
+# Veritabanı tablolarını oluştur
 Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
     title="HR Management API",
     description="Human Resources Leave Management System",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 
 allowed_origins = [
+    # Local Angular
     "http://localhost:4200",
     "http://127.0.0.1:4200",
+
+    # Vercel production domain
+    "https://hr-management-system-lilac.vercel.app",
+
+    # Şu an kullandığın Vercel deployment adresi
+    "https://hr-management-system-83w00poi2-dursuns-projects-630978bb.vercel.app",
 ]
 
 
@@ -39,20 +42,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=[
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS",
-    ],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "Origin",
-    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=["*"],
 )
 
