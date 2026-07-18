@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+
 import { environment } from '../../../environments/environment';
+
 import {
   CreateEmployeeRequest,
   Employee,
@@ -79,9 +81,7 @@ export class EmployeeService {
       );
   }
 
-  deleteEmployee(
-    id: number
-  ): Observable<void> {
+  deleteEmployee(id: number): Observable<void> {
     return this.http.delete<void>(
       `${this.employeeApiUrl}/${id}`
     );
