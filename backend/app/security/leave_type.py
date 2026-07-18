@@ -1,0 +1,11 @@
+from enum import Enum
+
+
+class LeaveType(str, Enum):
+    YILLIK_IZIN = "YILLIK_IZIN"
+    MAZERET_IZNI = "MAZERET_IZNI"
+    HASTALIK_IZNI = "HASTALIK_IZNI"
+    DOGUM_IZNI = "DOGUM_IZNI"
+    EVLILIK_IZNI = "EVLILIK_IZNI"
+    OLUM_IZNI = "OLUM_IZNI"
+    DIGER = "DIGER"
