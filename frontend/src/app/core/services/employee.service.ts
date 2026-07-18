@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 import {
   CreateEmployeeRequest,
   Employee,
@@ -16,8 +16,7 @@ import {
 export class EmployeeService {
   private readonly http = inject(HttpClient);
 
-  private readonly apiRoot =
-    'http://localhost:8000';
+  private readonly apiRoot = environment.apiUrl;
 
   private readonly employeeApiUrl =
     `${this.apiRoot}/employees`;
