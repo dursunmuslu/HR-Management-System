@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.database import Base, engine
 
-# Modeller tablo oluşturma sırasında SQLAlchemy tarafından görülsün
 from app.models.user import User
 from app.models.employee import Employee
 from app.models.leave_request import LeaveRequest
@@ -14,7 +13,6 @@ from app.routers.employee_router import router as employee_router
 from app.routers.leave_router import router as leave_router
 
 
-# Veritabanı tablolarını oluştur
 Base.metadata.create_all(bind=engine)
 
 
@@ -26,21 +24,24 @@ app = FastAPI(
 
 
 allowed_origins = [
-    # Local Angular
     "http://localhost:4200",
     "http://127.0.0.1:4200",
 
-    # Vercel production domain
     "https://hr-management-system-lilac.vercel.app",
-
-    # Şu an kullandığın Vercel deployment adresi
-    "https://hr-management-system-83w00poi2-dursuns-projects-630978bb.vercel.app",
 ]
 
 
 app.add_middleware(
     CORSMiddleware,
+
+    # Sabit adresler
     allow_origins=allowed_origins,
+
+    allow_origin_regex=(
+        r"^https://hr-management-system-"
+        r"[a-zA-Z0-9-]+-dursuns-projects-630978bb\.vercel\.app$"
+    ),
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,20 +55,14 @@ app.include_router(leave_router)
 app.include_router(dashboard_router)
 
 
-@app.get(
-    "/",
-    tags=["System"],
-)
+@app.get("/", tags=["System"])
 def home():
     return {
         "message": "HR Management API is running."
     }
 
 
-@app.get(
-    "/health",
-    tags=["System"],
-)
+@app.get("/health", tags=["System"])
 def health_check():
     return {
         "status": "healthy"
