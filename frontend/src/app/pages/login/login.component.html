@@ -1,0 +1,188 @@
+<main class="login-page">
+  <section class="login-visual">
+    <div class="visual-content">
+      <div class="brand-mark">
+        HR
+      </div>
+
+      <p class="eyebrow">
+        İnsan Kaynakları Yönetim Sistemi
+      </p>
+
+      <h1>
+        Ekibinizi tek merkezden yönetin.
+      </h1>
+
+      <p class="description">
+        Personel bilgilerini, izin taleplerini ve yönetici
+        onaylarını güvenli ve kolay bir şekilde takip edin.
+      </p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span>Kolay izin talebi oluşturma</span>
+        </div>
+
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span>Hızlı yönetici onay süreçleri</span>
+        </div>
+
+        <div class="feature-item">
+          <span class="feature-icon">✓</span>
+          <span>Güncel izin bakiyesi takibi</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-card">
+      <div class="mobile-brand">
+        HR
+      </div>
+
+      <div class="login-header">
+        <p class="welcome-text">
+          Tekrar hoş geldiniz
+        </p>
+
+        <h2>
+          Hesabınıza giriş yapın
+        </h2>
+
+        <p>
+          Devam etmek için kullanıcı bilgilerinizi girin.
+        </p>
+      </div>
+
+      @if (errorMessage) {
+        <div
+          class="alert alert-error"
+          role="alert"
+        >
+          <span class="alert-symbol">!</span>
+          <span>{{ errorMessage }}</span>
+        </div>
+      }
+
+      <form
+        class="login-form"
+        [formGroup]="loginForm"
+        (ngSubmit)="submit()"
+        novalidate
+      >
+        <div class="form-field">
+          <label for="username">
+            Kullanıcı adı
+          </label>
+
+          <div
+            class="input-wrapper"
+            [class.input-error]="
+              usernameControl.invalid &&
+              usernameControl.touched
+            "
+          >
+            <span class="input-icon">
+              👤
+            </span>
+
+            <input
+              id="username"
+              type="text"
+              formControlName="username"
+              placeholder="Kullanıcı adınızı girin"
+              autocomplete="username"
+            >
+          </div>
+
+          @if (
+            usernameControl.hasError('required') &&
+            usernameControl.touched
+          ) {
+            <small class="validation-message">
+              Kullanıcı adı zorunludur.
+            </small>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="password">
+            Şifre
+          </label>
+
+          <div
+            class="input-wrapper"
+            [class.input-error]="
+              passwordControl.invalid &&
+              passwordControl.touched
+            "
+          >
+            <span class="input-icon">
+              🔒
+            </span>
+
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Şifrenizi girin"
+              autocomplete="current-password"
+            >
+
+            <button
+              class="password-toggle"
+              type="button"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="
+                showPassword
+                  ? 'Şifreyi gizle'
+                  : 'Şifreyi göster'
+              "
+            >
+              {{ showPassword ? 'Gizle' : 'Göster' }}
+            </button>
+          </div>
+
+          @if (
+            passwordControl.hasError('required') &&
+            passwordControl.touched
+          ) {
+            <small class="validation-message">
+              Şifre zorunludur.
+            </small>
+          }
+
+          @if (
+            passwordControl.hasError('minlength') &&
+            passwordControl.touched
+          ) {
+            <small class="validation-message">
+              Şifre en az 6 karakter olmalıdır.
+            </small>
+          }
+        </div>
+
+        <button
+          class="login-button"
+          type="submit"
+          [disabled]="isLoading"
+        >
+          @if (isLoading) {
+            <span class="spinner"></span>
+            <span>Giriş yapılıyor...</span>
+          } @else {
+            <span>Giriş yap</span>
+            <span aria-hidden="true">→</span>
+          }
+        </button>
+      </form>
+
+      <p class="security-note">
+        🔐 Giriş bilgileriniz güvenli bağlantı üzerinden işlenir.
+      </p>
+    </div>
+  </section>
+</main>

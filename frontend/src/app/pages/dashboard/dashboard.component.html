@@ -1,0 +1,548 @@
+<section class="dashboard-page">
+
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">
+        Genel Bakış
+      </p>
+
+      <h1>
+        Hoş geldin, {{ username }}
+      </h1>
+
+      <p class="page-description">
+        @if (isManager) {
+          Personel ve izin süreçlerinin güncel
+          durumunu buradan takip edebilirsin.
+        } @else {
+          Kalan izin hakkını ve izin taleplerini
+          buradan takip edebilirsin.
+        }
+      </p>
+    </div>
+
+    @if (isEmployee) {
+      <a
+        class="primary-action"
+        routerLink="/leaves/create"
+      >
+        <span>＋</span>
+        Yeni izin talebi
+      </a>
+    }
+
+    @if (isManager) {
+      <a
+        class="primary-action"
+        routerLink="/leave-requests"
+      >
+        <span>✓</span>
+        İzin taleplerini yönet
+      </a>
+    }
+  </header>
+
+  @if (errorMessage) {
+    <div
+      class="error-alert"
+      role="alert"
+    >
+      <div>
+        <strong>
+          Veriler yüklenemedi
+        </strong>
+
+        <p>
+          {{ errorMessage }}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadDashboard()"
+      >
+        Tekrar dene
+      </button>
+    </div>
+  }
+
+  @if (isLoading) {
+    <div class="loading-grid">
+      @for (
+        item of [1, 2, 3, 4];
+        track item
+      ) {
+        <div class="skeleton-card">
+          <div
+            class="skeleton skeleton-icon"
+          ></div>
+
+          <div
+            class="skeleton skeleton-line"
+          ></div>
+
+          <div
+            class="skeleton skeleton-number"
+          ></div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (
+    !isLoading &&
+    isManager &&
+    summary
+  ) {
+    <div class="statistics-grid">
+
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon employees">
+            ♟
+          </span>
+
+          <span class="stat-badge">
+            Toplam
+          </span>
+        </div>
+
+        <p>
+          Toplam personel
+        </p>
+
+        <h2>
+          {{ summary.total_employees }}
+        </h2>
+
+        <span class="stat-note">
+          Sisteme kayıtlı personel sayısı
+        </span>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon requests">
+            ▤
+          </span>
+
+          <span class="stat-badge">
+            Tüm talepler
+          </span>
+        </div>
+
+        <p>
+          İzin talepleri
+        </p>
+
+        <h2>
+          {{ summary.total_leave_requests }}
+        </h2>
+
+        <span class="stat-note">
+          Oluşturulan toplam izin talebi
+        </span>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon pending">
+            ◷
+          </span>
+
+          @if (
+            summary.pending_leave_requests >
+            0
+          ) {
+            <span
+              class="stat-badge warning"
+            >
+              İşlem bekliyor
+            </span>
+          } @else {
+            <span
+              class="stat-badge success"
+            >
+              Güncel
+            </span>
+          }
+        </div>
+
+        <p>
+          Bekleyen talepler
+        </p>
+
+        <h2>
+          {{
+            summary
+              .pending_leave_requests
+          }}
+        </h2>
+
+        <span class="stat-note">
+          Yönetici onayı bekleyen talepler
+        </span>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon balance">
+            %
+          </span>
+
+          <span class="stat-badge">
+            Oran
+          </span>
+        </div>
+
+        <p>
+          İzin onay oranı
+        </p>
+
+        <h2>
+          %{{ approvalRate }}
+        </h2>
+
+        <span class="stat-note">
+          Sonuçlandırılan talepler içindeki
+          onay oranı
+        </span>
+      </article>
+
+    </div>
+
+    <div class="dashboard-content">
+
+      <section class="status-panel">
+        <div class="section-heading">
+          <div>
+            <p>
+              İzin Analizi
+            </p>
+
+            <h2>
+              Talep durumları
+            </h2>
+          </div>
+
+          <span class="approval-rate">
+            %{{ approvalRate }} onay oranı
+          </span>
+        </div>
+
+        <div class="status-list">
+
+          <div class="status-row">
+            <div class="status-label">
+              <span
+                class="status-dot approved"
+              ></span>
+
+              <div>
+                <strong>
+                  Onaylanan
+                </strong>
+
+                <small>
+                  Başarıyla onaylanan izinler
+                </small>
+              </div>
+            </div>
+
+            <span
+              class="status-value approved"
+            >
+              {{
+                summary
+                  .approved_leave_requests
+              }}
+            </span>
+          </div>
+
+          <div class="status-row">
+            <div class="status-label">
+              <span
+                class="status-dot pending"
+              ></span>
+
+              <div>
+                <strong>
+                  Bekleyen
+                </strong>
+
+                <small>
+                  Henüz sonuçlandırılmayan
+                  izinler
+                </small>
+              </div>
+            </div>
+
+            <span
+              class="status-value pending"
+            >
+              {{
+                summary
+                  .pending_leave_requests
+              }}
+            </span>
+          </div>
+
+          <div class="status-row">
+            <div class="status-label">
+              <span
+                class="status-dot rejected"
+              ></span>
+
+              <div>
+                <strong>
+                  Reddedilen
+                </strong>
+
+                <small>
+                  Yönetici tarafından reddedilen
+                  izinler
+                </small>
+              </div>
+            </div>
+
+            <span
+              class="status-value rejected"
+            >
+              {{
+                summary
+                  .rejected_leave_requests
+              }}
+            </span>
+          </div>
+
+          <div class="status-row">
+            <div class="status-label">
+              <span
+                class="status-dot cancelled"
+              ></span>
+
+              <div>
+                <strong>
+                  İptal edilen
+                </strong>
+
+                <small>
+                  Personel tarafından iptal edilen
+                  izinler
+                </small>
+              </div>
+            </div>
+
+            <span
+              class="status-value cancelled"
+            >
+              {{
+                summary
+                  .cancelled_leave_requests
+              }}
+            </span>
+          </div>
+
+        </div>
+      </section>
+
+      <aside class="quick-actions">
+        <div class="section-heading">
+          <div>
+            <p>
+              Hızlı İşlemler
+            </p>
+
+            <h2>
+              Yönetici işlemleri
+            </h2>
+          </div>
+        </div>
+
+        <div class="action-list">
+
+          <a routerLink="/leave-requests">
+            <span class="action-icon orange">
+              ✓
+            </span>
+
+            <div>
+              <strong>
+                İzin talepleri
+              </strong>
+
+              <small>
+                İzin taleplerini değerlendir
+              </small>
+            </div>
+
+            <span class="action-arrow">
+              →
+            </span>
+          </a>
+
+          <a routerLink="/employees">
+            <span class="action-icon green">
+              ♟
+            </span>
+
+            <div>
+              <strong>
+                Personelleri yönet
+              </strong>
+
+              <small>
+                Personel kayıtlarını görüntüle
+              </small>
+            </div>
+
+            <span class="action-arrow">
+              →
+            </span>
+          </a>
+
+        </div>
+      </aside>
+
+    </div>
+  }
+
+  @if (
+    !isLoading &&
+    isEmployee &&
+    leaveBalance
+  ) {
+    <div class="statistics-grid">
+
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon balance">
+            ◈
+          </span>
+
+          <span class="stat-badge">
+            Gün
+          </span>
+        </div>
+
+        <p>
+          Kalan yıllık iznim
+        </p>
+
+        <h2>
+          {{ remainingAnnualLeave }}
+        </h2>
+
+        <span class="stat-note">
+          Kullanabileceğin yıllık izin hakkı
+        </span>
+      </article>
+
+    </div>
+
+    <div class="dashboard-content">
+
+      <section class="status-panel">
+        <div class="section-heading">
+          <div>
+            <p>
+              İzin Bilgisi
+            </p>
+
+            <h2>
+              Kişisel izin durumun
+            </h2>
+          </div>
+        </div>
+
+        <div class="status-list">
+
+          <div class="status-row">
+            <div class="status-label">
+              <span
+                class="status-dot approved"
+              ></span>
+
+              <div>
+                <strong>
+                  Kalan izin
+                </strong>
+
+                <small>
+                  Kullanabileceğin yıllık izin
+                </small>
+              </div>
+            </div>
+
+            <span
+              class="status-value approved"
+            >
+              {{ remainingAnnualLeave }} gün
+            </span>
+          </div>
+
+        </div>
+      </section>
+
+      <aside class="quick-actions">
+        <div class="section-heading">
+          <div>
+            <p>
+              Hızlı İşlemler
+            </p>
+
+            <h2>
+              İzin işlemleri
+            </h2>
+          </div>
+        </div>
+
+        <div class="action-list">
+
+          <a routerLink="/leaves/create">
+            <span class="action-icon blue">
+              ＋
+            </span>
+
+            <div>
+              <strong>
+                İzin talebi oluştur
+              </strong>
+
+              <small>
+                Yeni bir izin talebi gönder
+              </small>
+            </div>
+
+            <span class="action-arrow">
+              →
+            </span>
+          </a>
+
+          <a routerLink="/leaves/my">
+            <span class="action-icon violet">
+              ▤
+            </span>
+
+            <div>
+              <strong>
+                İzinlerimi görüntüle
+              </strong>
+
+              <small>
+                Geçmiş izin taleplerini incele
+              </small>
+            </div>
+
+            <span class="action-arrow">
+              →
+            </span>
+          </a>
+
+        </div>
+      </aside>
+
+    </div>
+  }
+
+</section>

@@ -1,0 +1,164 @@
+<div class="app-shell">
+  <aside
+    class="sidebar"
+    [class.sidebar-open]="sidebarOpen"
+  >
+    <div class="sidebar-header">
+      <a
+        class="brand"
+        routerLink="/dashboard"
+        (click)="closeSidebar()"
+      >
+        <span class="brand-logo">HR</span>
+
+        <span class="brand-text">
+          <strong>HR Yönetim</strong>
+          <small>İnsan Kaynakları</small>
+        </span>
+      </a>
+
+      <button
+        class="sidebar-close"
+        type="button"
+        aria-label="Menüyü kapat"
+        (click)="closeSidebar()"
+      >
+        ×
+      </button>
+    </div>
+
+    <nav class="navigation">
+      <p class="navigation-title">
+        Genel
+      </p>
+
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="closeSidebar()"
+      >
+        <span class="menu-icon">⌂</span>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="navigation-title">
+        İzin Yönetimi
+      </p>
+
+      <a
+        routerLink="/leaves/my"
+        routerLinkActive="active"
+        (click)="closeSidebar()"
+      >
+        <span class="menu-icon">▤</span>
+        <span>İzin Taleplerim</span>
+      </a>
+
+      <a
+        routerLink="/leaves/create"
+        routerLinkActive="active"
+        (click)="closeSidebar()"
+      >
+        <span class="menu-icon">＋</span>
+        <span>Yeni İzin Talebi</span>
+      </a>
+
+      @if (isManager) {
+        <p class="navigation-title">
+          Yönetici İşlemleri
+        </p>
+
+        <a
+          routerLink="/leave-requests"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">✓</span>
+          <span>İzin Onayları</span>
+        </a>
+
+        <a
+          routerLink="/employees"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">♟</span>
+          <span>Personeller</span>
+        </a>
+
+        <a
+          routerLink="/employees/create"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">⊕</span>
+          <span>Personel Ekle</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">
+        {{ userInitial }}
+      </div>
+
+      <div class="user-information">
+        <strong>{{ displayName }}</strong>
+        <span>{{ roleLabel }}</span>
+      </div>
+
+      <button
+        class="sidebar-logout"
+        type="button"
+        title="Çıkış yap"
+        aria-label="Çıkış yap"
+        (click)="logout()"
+      >
+        ↪
+      </button>
+    </div>
+  </aside>
+
+  @if (sidebarOpen) {
+    <button
+      class="sidebar-overlay"
+      type="button"
+      aria-label="Menüyü kapat"
+      (click)="closeSidebar()"
+    ></button>
+  }
+
+  <div class="page-wrapper">
+    <header class="topbar">
+      <button
+        class="menu-button"
+        type="button"
+        aria-label="Menüyü aç"
+        (click)="toggleSidebar()"
+      >
+        ☰
+      </button>
+
+      <div class="topbar-title">
+        <strong>İnsan Kaynakları Yönetim Sistemi</strong>
+        <span>Personel ve izin süreçlerinizi yönetin</span>
+      </div>
+
+      <div class="topbar-user">
+        <div class="topbar-user-text">
+          <strong>{{ displayName }}</strong>
+          <span>{{ roleLabel }}</span>
+        </div>
+
+        <div class="topbar-avatar">
+          {{ userInitial }}
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

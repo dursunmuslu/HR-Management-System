@@ -1,0 +1,473 @@
+<section class="requests-page">
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">
+        Yönetici İşlemleri
+      </p>
+
+      <h1>İzin Onayları</h1>
+
+      <p>
+        Personeller tarafından oluşturulan izin taleplerini
+        inceleyebilir, onaylayabilir veya reddedebilirsin.
+      </p>
+    </div>
+
+    <button
+      class="refresh-button"
+      type="button"
+      [disabled]="isLoading"
+      (click)="loadLeaves()"
+    >
+      ↻ Listeyi yenile
+    </button>
+  </header>
+
+  @if (successMessage) {
+    <div class="alert alert-success">
+      <span class="alert-symbol">✓</span>
+      {{ successMessage }}
+    </div>
+  }
+
+  @if (errorMessage && !selectedLeave) {
+    <div class="alert alert-error">
+      <div>
+        <strong>İşlem tamamlanamadı</strong>
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadLeaves()"
+      >
+        Tekrar dene
+      </button>
+    </div>
+  }
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span class="summary-icon all">▤</span>
+
+      <div>
+        <p>Toplam talep</p>
+        <strong>{{ totalCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon pending">◷</span>
+
+      <div>
+        <p>Bekleyen</p>
+        <strong>{{ pendingCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon approved">✓</span>
+
+      <div>
+        <p>Onaylanan</p>
+        <strong>{{ approvedCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon rejected">×</span>
+
+      <div>
+        <p>Reddedilen</p>
+        <strong>{{ rejectedCount }}</strong>
+      </div>
+    </article>
+  </div>
+
+  <section class="table-card">
+    <div class="toolbar">
+      <div class="search-box">
+        <span>⌕</span>
+
+        <input
+          type="search"
+          [(ngModel)]="searchText"
+          (ngModelChange)="applyFilters()"
+          placeholder="Personel, izin türü veya açıklama ara"
+        >
+      </div>
+
+      <select
+        [(ngModel)]="selectedStatus"
+        (ngModelChange)="applyFilters()"
+      >
+        <option value="ALL">
+          Tüm durumlar
+        </option>
+
+        <option value="PENDING">
+          Beklemede
+        </option>
+
+        <option value="APPROVED">
+          Onaylandı
+        </option>
+
+        <option value="REJECTED">
+          Reddedildi
+        </option>
+
+        <option value="CANCELLED">
+          İptal edildi
+        </option>
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="loading-list">
+        @for (item of [1, 2, 3, 4]; track item) {
+          <div class="loading-row">
+            <div class="skeleton skeleton-person"></div>
+            <div class="skeleton skeleton-date"></div>
+            <div class="skeleton skeleton-status"></div>
+          </div>
+        }
+      </div>
+    } @else if (filteredLeaves.length === 0) {
+      <div class="empty-state">
+        <span>✓</span>
+
+        <h2>Gösterilecek izin talebi yok</h2>
+
+        <p>
+          Seçilen kriterlere uygun bir izin talebi bulunamadı.
+        </p>
+      </div>
+    } @else {
+      <div class="desktop-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>İzin bilgileri</th>
+              <th>Tarih aralığı</th>
+              <th>Süre</th>
+              <th>Durum</th>
+              <th class="action-heading">İşlem</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (leave of filteredLeaves; track leave.id) {
+              <tr>
+                <td>
+                  <div class="employee-cell">
+                    <span class="employee-avatar">
+                      {{ getEmployeeInitial(leave) }}
+                    </span>
+
+                    <div>
+                      <strong>
+                        {{ getEmployeeName(leave) }}
+                      </strong>
+
+                      <small>
+                        Personel No: #{{ leave.employee_id }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <div class="leave-information">
+                    <strong>
+                      {{ getLeaveTypeLabel(leave.leave_type) }}
+                    </strong>
+
+                    <span
+                      class="reason-text"
+                      [title]="leave.description || ''"
+                    >
+                      {{ leave.description || '-' }}
+                    </span>
+                  </div>
+                </td>
+
+                <td>
+                  <div class="date-information">
+                    <strong>
+                      {{ formatDate(leave.start_date) }}
+                    </strong>
+
+                    <span>
+                      {{ formatDate(leave.end_date) }}
+                    </span>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="day-count">
+                    {{ getLeaveDays(leave) }} gün
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class]="getStatusClass(leave.status)"
+                  >
+                    {{ getStatusLabel(leave.status) }}
+                  </span>
+                </td>
+
+                <td class="action-cell">
+                  @if (isPending(leave.status)) {
+                    <div class="action-buttons">
+                      <button
+                        class="approve-button"
+                        type="button"
+                        (click)="openActionModal(leave, 'approve')"
+                      >
+                        Onayla
+                      </button>
+
+                      <button
+                        class="reject-button"
+                        type="button"
+                        (click)="openActionModal(leave, 'reject')"
+                      >
+                        Reddet
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="processed-text">
+                      İşlem tamamlandı
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mobile-list">
+        @for (leave of filteredLeaves; track leave.id) {
+          <article class="request-card">
+            <div class="request-card-header">
+              <div class="employee-cell">
+                <span class="employee-avatar">
+                  {{ getEmployeeInitial(leave) }}
+                </span>
+
+                <div>
+                  <strong>
+                    {{ getEmployeeName(leave) }}
+                  </strong>
+
+                  <small>
+                    Personel #{{ leave.employee_id }}
+                  </small>
+                </div>
+              </div>
+
+              <span
+                class="status-badge"
+                [class]="getStatusClass(leave.status)"
+              >
+                {{ getStatusLabel(leave.status) }}
+              </span>
+            </div>
+
+            <div class="request-type">
+              <span>İzin türü</span>
+
+              <strong>
+                {{ getLeaveTypeLabel(leave.leave_type) }}
+              </strong>
+            </div>
+
+            <div class="request-details">
+              <div>
+                <span>Başlangıç</span>
+
+                <strong>
+                  {{ formatDate(leave.start_date) }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Bitiş</span>
+
+                <strong>
+                  {{ formatDate(leave.end_date) }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Süre</span>
+
+                <strong>
+                  {{ getLeaveDays(leave) }} gün
+                </strong>
+              </div>
+            </div>
+
+            <div class="request-reason">
+              <span>Açıklama</span>
+              <p>{{ leave.description || '-' }}</p>
+            </div>
+
+            @if (leave.manager_note) {
+              <div class="manager-note">
+                <span>Yönetici notu</span>
+                <p>{{ leave.manager_note }}</p>
+              </div>
+            }
+
+            @if (isPending(leave.status)) {
+              <div class="mobile-actions">
+                <button
+                  class="approve-button"
+                  type="button"
+                  (click)="openActionModal(leave, 'approve')"
+                >
+                  Onayla
+                </button>
+
+                <button
+                  class="reject-button"
+                  type="button"
+                  (click)="openActionModal(leave, 'reject')"
+                >
+                  Reddet
+                </button>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  @if (selectedLeave && selectedAction) {
+    <div
+      class="modal-backdrop"
+      (click)="closeActionModal()"
+    >
+      <section
+        class="action-modal"
+        role="dialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+      >
+        <div
+          class="modal-icon"
+          [class.approve]="selectedAction === 'approve'"
+          [class.reject]="selectedAction === 'reject'"
+        >
+          {{ selectedAction === 'approve' ? '✓' : '×' }}
+        </div>
+
+        <h2>
+          {{
+            selectedAction === 'approve'
+              ? 'İzin talebini onayla'
+              : 'İzin talebini reddet'
+          }}
+        </h2>
+
+        <p class="modal-description">
+          <strong>
+            {{ getEmployeeName(selectedLeave) }}
+          </strong>
+
+          tarafından oluşturulan
+          {{ getLeaveDays(selectedLeave) }} günlük izin talebi
+
+          {{
+            selectedAction === 'approve'
+              ? 'onaylanacak.'
+              : 'reddedilecek.'
+          }}
+        </p>
+
+        <div class="modal-summary">
+          <div>
+            <span>İzin türü</span>
+
+            <strong>
+              {{ getLeaveTypeLabel(selectedLeave.leave_type) }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Tarih</span>
+
+            <strong>
+              {{ formatDate(selectedLeave.start_date) }}
+              -
+              {{ formatDate(selectedLeave.end_date) }}
+            </strong>
+          </div>
+        </div>
+
+        <label for="manager-note">
+          Yönetici notu
+
+          @if (selectedAction === 'reject') {
+            <span>*</span>
+          }
+        </label>
+
+        <textarea
+          id="manager-note"
+          [(ngModel)]="managerNote"
+          rows="4"
+          maxlength="500"
+          [placeholder]="
+            selectedAction === 'approve'
+              ? 'İsteğe bağlı bir not ekleyin...'
+              : 'Reddetme nedenini yazın...'
+          "
+        ></textarea>
+
+        @if (errorMessage) {
+          <div class="modal-error">
+            {{ errorMessage }}
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button
+            class="modal-cancel"
+            type="button"
+            [disabled]="isProcessing"
+            (click)="closeActionModal()"
+          >
+            Vazgeç
+          </button>
+
+          <button
+            class="modal-confirm"
+            type="button"
+            [class.approve]="selectedAction === 'approve'"
+            [class.reject]="selectedAction === 'reject'"
+            [disabled]="isProcessing"
+            (click)="confirmAction()"
+          >
+            @if (isProcessing) {
+              İşleniyor...
+            } @else {
+              {{
+                selectedAction === 'approve'
+                  ? 'Talebi onayla'
+                  : 'Talebi reddet'
+              }}
+            }
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</section>

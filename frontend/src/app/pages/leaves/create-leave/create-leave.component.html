@@ -1,0 +1,276 @@
+<section class="create-leave-page">
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">
+        İzin Yönetimi
+      </p>
+
+      <h1>Yeni İzin Talebi</h1>
+
+      <p>
+        İzin türünü ve tarih aralığını belirleyerek yeni bir
+        izin talebi oluşturabilirsin.
+      </p>
+    </div>
+
+    <a
+      class="secondary-action"
+      routerLink="/leaves/my"
+    >
+      ← İzin taleplerime dön
+    </a>
+  </header>
+
+  @if (errorMessage) {
+    <div class="error-alert" role="alert">
+      <span>!</span>
+
+      <div>
+        <strong>Talep oluşturulamadı</strong>
+        <p>{{ errorMessage }}</p>
+      </div>
+    </div>
+  }
+
+  <div class="content-grid">
+    <section class="form-card">
+      <div class="card-header">
+        <div>
+          <p>Talep Bilgileri</p>
+          <h2>İzin detaylarını girin</h2>
+        </div>
+
+        <span class="step-badge">
+          Yeni talep
+        </span>
+      </div>
+
+      <form
+        [formGroup]="leaveForm"
+        (ngSubmit)="submit()"
+        novalidate
+      >
+        <div class="form-field">
+          <label for="leave-type">
+            İzin türü
+          </label>
+
+          <select
+            id="leave-type"
+            formControlName="leave_type"
+          >
+            <option value="YILLIK_IZIN">
+              Yıllık İzin
+            </option>
+
+            <option value="HASTALIK_IZNI">
+              Hastalık İzni
+            </option>
+
+            <option value="MAZERET_IZNI">
+              Mazeret İzni
+            </option>
+
+            <option value="UCRETSIZ_IZIN">
+              Ücretsiz İzin
+            </option>
+          </select>
+        </div>
+
+        <div class="date-grid">
+          <div class="form-field">
+            <label for="start-date">
+              Başlangıç tarihi
+            </label>
+
+            <input
+              id="start-date"
+              type="date"
+              formControlName="start_date"
+              [min]="today"
+              (change)="onStartDateChange()"
+            >
+
+            @if (
+              startDateControl.invalid &&
+              startDateControl.touched
+            ) {
+              <small class="validation-message">
+                Başlangıç tarihi zorunludur.
+              </small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="end-date">
+              Bitiş tarihi
+            </label>
+
+            <input
+              id="end-date"
+              type="date"
+              formControlName="end_date"
+              [min]="startDateControl.value || today"
+            >
+
+            @if (
+              endDateControl.invalid &&
+              endDateControl.touched
+            ) {
+              <small class="validation-message">
+                Bitiş tarihi zorunludur.
+              </small>
+            }
+          </div>
+        </div>
+
+        @if (calculatedDays > 0) {
+          <div class="duration-information">
+            <span class="duration-icon">◷</span>
+
+            <div>
+              <strong>
+                Toplam izin süresi:
+                {{ calculatedDays }} gün
+              </strong>
+
+              <p>
+                Başlangıç ve bitiş tarihleri izin süresine dahildir.
+              </p>
+            </div>
+          </div>
+        }
+
+        <div class="form-field">
+          <div class="label-row">
+            <label for="description">
+              Açıklama
+            </label>
+
+            <span>
+              {{ descriptionControl.value.length }}/500
+            </span>
+          </div>
+
+          <textarea
+            id="description"
+            formControlName="description"
+            rows="6"
+            maxlength="500"
+            placeholder="İzin talebinizin nedenini açıklayın..."
+          ></textarea>
+
+          @if (
+            descriptionControl.hasError('required') &&
+            descriptionControl.touched
+          ) {
+            <small class="validation-message">
+              Açıklama alanı zorunludur.
+            </small>
+          }
+
+          @if (
+            descriptionControl.hasError('minlength') &&
+            descriptionControl.touched
+          ) {
+            <small class="validation-message">
+              Açıklama en az 10 karakter olmalıdır.
+            </small>
+          }
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/leaves/my">
+            Vazgeç
+          </a>
+
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
+          >
+            @if (isSubmitting) {
+              <span class="spinner"></span>
+              Talep gönderiliyor...
+            } @else {
+              İzin talebini gönder
+              <span>→</span>
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="information-panel">
+      <section class="balance-card">
+        <div class="balance-header">
+          <span class="balance-icon">◈</span>
+
+          <div>
+            <p>Yıllık izin bakiyesi</p>
+            <span>Güncel kullanılabilir izin</span>
+          </div>
+        </div>
+
+        @if (isBalanceLoading) {
+          <div class="balance-loading"></div>
+        } @else {
+          <strong class="balance-number">
+            {{ remainingAnnualLeave }}
+            <small>gün</small>
+          </strong>
+        }
+
+        @if (
+          leaveTypeControl.value === 'YILLIK_IZIN' &&
+          calculatedDays > 0
+        ) {
+          <div class="balance-preview">
+            <span>Talep sonrası kalan</span>
+
+            <strong>
+              {{
+                remainingAnnualLeave - calculatedDays < 0
+                  ? 0
+                  : remainingAnnualLeave - calculatedDays
+              }}
+              gün
+            </strong>
+          </div>
+        }
+      </section>
+
+      <section class="information-card">
+        <h3>Bilgilendirme</h3>
+
+        <div class="information-list">
+          <div>
+            <span>1</span>
+
+            <p>
+              İzin talebiniz oluşturulduktan sonra yönetici
+              onayına gönderilir.
+            </p>
+          </div>
+
+          <div>
+            <span>2</span>
+
+            <p>
+              Bekleyen talepler, yönetici işlem yapmadan önce
+              iptal edilebilir.
+            </p>
+          </div>
+
+          <div>
+            <span>3</span>
+
+            <p>
+              Onaylanan yıllık izinler mevcut izin bakiyenizden
+              düşülür.
+            </p>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</section>

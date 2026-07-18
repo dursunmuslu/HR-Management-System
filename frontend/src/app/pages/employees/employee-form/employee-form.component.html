@@ -1,0 +1,108 @@
+<section class="employee-form-page">
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">Personel Yönetimi</p>
+      <h1>Yeni Personel Ekle</h1>
+      <p>Kullanıcı hesabı ve personel kaydı aynı anda oluşturulur.</p>
+    </div>
+
+    <button type="button" class="back-button" (click)="goBack()">
+      ← Personel listesine dön
+    </button>
+  </header>
+
+  @if (errorMessage) {
+    <div class="error-alert">
+      <strong>Personel oluşturulamadı</strong>
+      <p>{{ errorMessage }}</p>
+    </div>
+  }
+
+  <form
+    class="form-card"
+    [formGroup]="employeeForm"
+    (ngSubmit)="submit()"
+    novalidate
+  >
+    <div class="form-section">
+      <div class="section-header">
+        <span>1</span>
+        <div>
+          <h2>Giriş hesabı</h2>
+          <p>Personelin sisteme giriş yapacağı bilgileri girin.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="username">Kullanıcı adı *</label>
+          <input id="username" type="text" formControlName="username" placeholder="hasan">
+          @if (controls.username.invalid && controls.username.touched) {
+            <small>En az 3 karakter girin.</small>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="password">Geçici şifre *</label>
+          <div class="password-field">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="En az 6 karakter"
+            >
+            <button type="button" (click)="togglePassword()">
+              {{ showPassword ? 'Gizle' : 'Göster' }}
+            </button>
+          </div>
+          @if (controls.password.invalid && controls.password.touched) {
+            <small>Şifre 6–72 karakter olmalıdır.</small>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <span>2</span>
+        <div>
+          <h2>Kişisel bilgiler</h2>
+          <p>Personelin kimlik ve iletişim bilgilerini girin.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field"><label for="first_name">Ad *</label><input id="first_name" formControlName="first_name"></div>
+        <div class="form-field"><label for="last_name">Soyad *</label><input id="last_name" formControlName="last_name"></div>
+        <div class="form-field"><label for="tc_no">TC Kimlik No *</label><input id="tc_no" maxlength="11" inputmode="numeric" formControlName="tc_no"></div>
+        <div class="form-field"><label for="phone">Telefon *</label><input id="phone" type="tel" formControlName="phone"></div>
+        <div class="form-field"><label for="email">E-posta *</label><input id="email" type="email" formControlName="email"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <span>3</span>
+        <div>
+          <h2>Çalışma bilgileri</h2>
+          <p>Şirket içi bilgileri girin.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field"><label for="employee_number">Personel numarası *</label><input id="employee_number" formControlName="employee_number"></div>
+        <div class="form-field"><label for="department">Departman *</label><input id="department" formControlName="department"></div>
+        <div class="form-field"><label for="position">Pozisyon *</label><input id="position" formControlName="position"></div>
+        <div class="form-field"><label for="hire_date">İşe giriş tarihi *</label><input id="hire_date" type="date" formControlName="hire_date"></div>
+        <div class="form-field"><label for="remaining_annual_leave">Yıllık izin hakkı *</label><input id="remaining_annual_leave" type="number" min="0" formControlName="remaining_annual_leave"></div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="cancel-button" [disabled]="isSubmitting" (click)="goBack()">Vazgeç</button>
+      <button type="submit" class="submit-button" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Oluşturuluyor...' : 'Personeli oluştur' }}
+      </button>
+    </div>
+  </form>
+</section>

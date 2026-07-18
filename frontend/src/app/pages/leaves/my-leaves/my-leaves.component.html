@@ -1,0 +1,322 @@
+<section class="leave-page">
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">
+        İzin Yönetimi
+      </p>
+
+      <h1>İzin Taleplerim</h1>
+
+      <p class="page-description">
+        Oluşturduğun izin taleplerini görüntüleyebilir,
+        durumlarını takip edebilir ve bekleyen taleplerini
+        iptal edebilirsin.
+      </p>
+    </div>
+
+    <a
+      class="primary-action"
+      routerLink="/leaves/create"
+    >
+      <span>＋</span>
+      Yeni izin talebi
+    </a>
+  </header>
+
+  @if (successMessage) {
+    <div class="alert alert-success">
+      <span class="alert-icon">✓</span>
+      <span>{{ successMessage }}</span>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert-error">
+      <div>
+        <strong>İşlem tamamlanamadı</strong>
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadLeaves()"
+      >
+        Tekrar dene
+      </button>
+    </div>
+  }
+
+  <div class="summary-grid">
+    <article class="summary-card">
+      <span class="summary-icon all">▤</span>
+
+      <div>
+        <p>Toplam talep</p>
+        <strong>{{ totalCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon pending">◷</span>
+
+      <div>
+        <p>Bekleyen</p>
+        <strong>{{ pendingCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon approved">✓</span>
+
+      <div>
+        <p>Onaylanan</p>
+        <strong>{{ approvedCount }}</strong>
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <span class="summary-icon rejected">×</span>
+
+      <div>
+        <p>Reddedilen</p>
+        <strong>{{ rejectedCount }}</strong>
+      </div>
+    </article>
+  </div>
+
+  <section class="content-card">
+    <div class="toolbar">
+      <div class="search-box">
+        <span>⌕</span>
+
+        <input
+          type="search"
+          placeholder="İzin türü veya açıklama ara"
+          [value]="searchText"
+          (input)="onSearchChange($event)"
+        >
+      </div>
+
+      <select
+        [value]="selectedStatus"
+        (change)="onStatusChange($event)"
+      >
+        <option value="ALL">
+          Tüm durumlar
+        </option>
+
+        <option value="PENDING">
+          Beklemede
+        </option>
+
+        <option value="APPROVED">
+          Onaylandı
+        </option>
+
+        <option value="REJECTED">
+          Reddedildi
+        </option>
+
+        <option value="CANCELLED">
+          İptal edildi
+        </option>
+      </select>
+    </div>
+
+    @if (isLoading) {
+      <div class="loading-list">
+        @for (item of [1, 2, 3]; track item) {
+          <div class="loading-row">
+            <div class="skeleton skeleton-large"></div>
+            <div class="skeleton skeleton-medium"></div>
+            <div class="skeleton skeleton-small"></div>
+          </div>
+        }
+      </div>
+    } @else if (filteredLeaves.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">▤</div>
+
+        <h2>İzin talebi bulunamadı</h2>
+
+        <p>
+          Seçtiğin filtrelere uygun bir izin talebi bulunmuyor.
+        </p>
+
+        <a routerLink="/leaves/create">
+          Yeni izin talebi oluştur
+        </a>
+      </div>
+    } @else {
+      <div class="desktop-table">
+        <table>
+          <thead>
+            <tr>
+              <th>İzin türü</th>
+              <th>Tarih aralığı</th>
+              <th>Süre</th>
+              <th>Açıklama</th>
+              <th>Durum</th>
+              <th class="actions-column">İşlem</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (leave of filteredLeaves; track leave.id) {
+              <tr>
+                <td>
+                  <div class="leave-type">
+                    <span class="leave-type-icon">◈</span>
+
+                    <div>
+                      <strong>
+                        {{ getLeaveTypeLabel(leave.leave_type) }}
+                      </strong>
+
+                      <small>
+                        Talep No: #{{ leave.id }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <div class="date-range">
+                    <strong>
+                      {{ formatDate(leave.start_date) }}
+                    </strong>
+
+                    <span>
+                      {{ formatDate(leave.end_date) }}
+                    </span>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="day-count">
+                    {{ getLeaveDays(leave) }} gün
+                  </span>
+                </td>
+
+                <td>
+                  <p
+                    class="reason"
+                    [title]="leave.description || ''"
+                  >
+                    {{ leave.description || '-' }}
+                  </p>
+                </td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class]="getStatusClass(leave.status)"
+                  >
+                    {{ getStatusLabel(leave.status) }}
+                  </span>
+                </td>
+
+                <td class="actions-column">
+                  @if (canCancel(leave)) {
+                    <button
+                      class="cancel-button"
+                      type="button"
+                      [disabled]="cancellingLeaveId === leave.id"
+                      (click)="cancelLeave(leave)"
+                    >
+                      @if (cancellingLeaveId === leave.id) {
+                        İptal ediliyor...
+                      } @else {
+                        İptal et
+                      }
+                    </button>
+                  } @else {
+                    <span class="no-action">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mobile-list">
+        @for (leave of filteredLeaves; track leave.id) {
+          <article class="leave-mobile-card">
+            <div class="mobile-card-header">
+              <div>
+                <span class="request-number">
+                  Talep #{{ leave.id }}
+                </span>
+
+                <h3>
+                  {{ getLeaveTypeLabel(leave.leave_type) }}
+                </h3>
+              </div>
+
+              <span
+                class="status-badge"
+                [class]="getStatusClass(leave.status)"
+              >
+                {{ getStatusLabel(leave.status) }}
+              </span>
+            </div>
+
+            <div class="mobile-detail-grid">
+              <div>
+                <span>Başlangıç</span>
+
+                <strong>
+                  {{ formatDate(leave.start_date) }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Bitiş</span>
+
+                <strong>
+                  {{ formatDate(leave.end_date) }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Toplam süre</span>
+
+                <strong>
+                  {{ getLeaveDays(leave) }} gün
+                </strong>
+              </div>
+            </div>
+
+            <div class="mobile-reason">
+              <span>Açıklama</span>
+              <p>{{ leave.description || '-' }}</p>
+            </div>
+
+            @if (leave.manager_note) {
+              <div class="manager-note">
+                <span>Yönetici notu</span>
+                <p>{{ leave.manager_note }}</p>
+              </div>
+            }
+
+            @if (canCancel(leave)) {
+              <button
+                class="mobile-cancel-button"
+                type="button"
+                [disabled]="cancellingLeaveId === leave.id"
+                (click)="cancelLeave(leave)"
+              >
+                @if (cancellingLeaveId === leave.id) {
+                  İptal ediliyor...
+                } @else {
+                  Talebi iptal et
+                }
+              </button>
+            }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</section>
