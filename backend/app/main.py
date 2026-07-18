@@ -1,3 +1,4 @@
+from app.create_admin import create_initial_admin
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,7 +15,7 @@ from app.routers.leave_router import router as leave_router
 
 
 Base.metadata.create_all(bind=engine)
-
+create_initial_admin()
 
 app = FastAPI(
     title="HR Management API",
