@@ -1,4 +1,4 @@
 export const environment = {
-  production: false,
-  apiUrl: 'http://127.0.0.1:8000'
+  production: true,
+  apiUrl: 'https://hr-management-api-6rpx.onrender.com'
 };
