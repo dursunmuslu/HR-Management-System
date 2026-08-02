@@ -1,22 +1,29 @@
+import { isPlatformBrowser } from '@angular/common';
+
 import { HttpClient } from '@angular/common/http';
+
 import {
   Injectable,
   PLATFORM_ID,
   inject
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+
 import { Router } from '@angular/router';
+
 import {
   Observable,
   tap
 } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+
 import {
+  ChangePasswordRequest,
   CurrentUser,
   LoginRequest,
   TokenResponse
 } from '../models/auth.model';
+
 
 @Injectable({
   providedIn: 'root'
@@ -27,34 +34,75 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
 
-  private readonly apiUrl = environment.apiUrl;
-  private readonly tokenKey = 'hr_access_token';
-  private readonly userKey = 'hr_current_user';
+  private readonly apiUrl =
+    environment.apiUrl.replace(/\/+$/, '');
+
+  private readonly tokenKey =
+    'hr_access_token';
+
+  private readonly userKey =
+    'hr_current_user';
+
 
   private get isBrowser(): boolean {
-    return isPlatformBrowser(this.platformId);
-  }
-
-  login(request: LoginRequest): Observable<TokenResponse> {
-    return this.http.post<TokenResponse>(
-      `${this.apiUrl}/auth/login`,
-      request
-    ).pipe(
-      tap(response => {
-        this.setToken(response.access_token);
-      })
+    return isPlatformBrowser(
+      this.platformId
     );
   }
 
-  getCurrentUser(): Observable<CurrentUser> {
-    return this.http.get<CurrentUser>(
-      `${this.apiUrl}/auth/me`
-    ).pipe(
-      tap(user => {
-        this.setStoredUser(user);
-      })
-    );
+
+  login(
+    request: LoginRequest
+  ): Observable<TokenResponse> {
+    return this.http
+      .post<TokenResponse>(
+        `${this.apiUrl}/auth/login`,
+        request
+      )
+      .pipe(
+        tap(response => {
+          this.setToken(
+            response.access_token
+          );
+
+          this.setStoredUser(
+            response.user
+          );
+        })
+      );
   }
+
+
+  getCurrentUser():
+    Observable<CurrentUser> {
+
+    return this.http
+      .get<CurrentUser>(
+        `${this.apiUrl}/auth/me`
+      )
+      .pipe(
+        tap(user => {
+          this.setStoredUser(user);
+        })
+      );
+  }
+
+
+  changePassword(
+    request: ChangePasswordRequest
+  ): Observable<CurrentUser> {
+    return this.http
+      .post<CurrentUser>(
+        `${this.apiUrl}/auth/change-password`,
+        request
+      )
+      .pipe(
+        tap(user => {
+          this.setStoredUser(user);
+        })
+      );
+  }
+
 
   setToken(token: string): void {
     if (!this.isBrowser) {
@@ -67,6 +115,7 @@ export class AuthService {
     );
   }
 
+
   getToken(): string | null {
     if (!this.isBrowser) {
       return null;
@@ -77,7 +126,10 @@ export class AuthService {
     );
   }
 
-  setStoredUser(user: CurrentUser): void {
+
+  setStoredUser(
+    user: CurrentUser
+  ): void {
     if (!this.isBrowser) {
       return;
     }
@@ -88,41 +140,124 @@ export class AuthService {
     );
   }
 
-  getStoredUser(): CurrentUser | null {
+
+  getStoredUser():
+    CurrentUser | null {
+
     if (!this.isBrowser) {
       return null;
     }
 
-    const storedUser = localStorage.getItem(
-      this.userKey
-    );
+    const storedUser =
+      localStorage.getItem(
+        this.userKey
+      );
 
     if (!storedUser) {
       return null;
     }
 
     try {
-      return JSON.parse(storedUser) as CurrentUser;
+      return JSON.parse(
+        storedUser
+      ) as CurrentUser;
+
     } catch {
-      localStorage.removeItem(this.userKey);
+      localStorage.removeItem(
+        this.userKey
+      );
+
       return null;
     }
   }
 
+
   isAuthenticated(): boolean {
-    return Boolean(this.getToken());
+    return Boolean(
+      this.getToken()
+    );
   }
 
-  isManager(): boolean {
-    return this.getStoredUser()?.role === 'YONETICI';
+
+  mustChangePassword(): boolean {
+    return Boolean(
+      this.getStoredUser()
+        ?.must_change_password
+    );
   }
+
+
+  isPlatformOwner(): boolean {
+    return (
+      this.getStoredUser()?.role ===
+      'PLATFORM_OWNER'
+    );
+  }
+
+
+  isManager(): boolean {
+    return (
+      this.getStoredUser()?.role ===
+      'YONETICI'
+    );
+  }
+
+
+  isEmployee(): boolean {
+    return (
+      this.getStoredUser()?.role ===
+      'PERSONEL'
+    );
+  }
+
+
+  isCompanyUser(): boolean {
+    const role =
+      this.getStoredUser()?.role;
+
+    return (
+      role === 'YONETICI' ||
+      role === 'PERSONEL'
+    );
+  }
+
+
+  getDefaultRoute(): string {
+    const user =
+      this.getStoredUser();
+
+    if (!user) {
+      return '/login';
+    }
+
+    if (user.must_change_password) {
+      return '/change-password';
+    }
+
+    if (
+      user.role ===
+      'PLATFORM_OWNER'
+    ) {
+      return '/platform';
+    }
+
+    return '/dashboard';
+  }
+
 
   logout(): void {
     if (this.isBrowser) {
-      localStorage.removeItem(this.tokenKey);
-      localStorage.removeItem(this.userKey);
+      localStorage.removeItem(
+        this.tokenKey
+      );
+
+      localStorage.removeItem(
+        this.userKey
+      );
     }
 
-    void this.router.navigate(['/login']);
+    void this.router.navigate([
+      '/login'
+    ]);
   }
 }

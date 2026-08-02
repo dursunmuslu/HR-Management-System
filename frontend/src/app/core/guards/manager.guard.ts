@@ -1,4 +1,5 @@
 import { inject } from '@angular/core';
+
 import {
   CanActivateFn,
   Router
@@ -9,18 +10,46 @@ import {
 } from '../services/auth.service';
 
 
-export const managerGuard: CanActivateFn = () => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
+export const managerGuard:
+  CanActivateFn = () => {
+
+  const authService =
+    inject(AuthService);
+
+  const router =
+    inject(Router);
 
   if (
-    authService.isAuthenticated()
-    && authService.isManager()
+    !authService.isAuthenticated()
+  ) {
+    return router.createUrlTree([
+      '/login'
+    ]);
+  }
+
+  if (
+    authService.mustChangePassword()
+  ) {
+    return router.createUrlTree([
+      '/change-password'
+    ]);
+  }
+
+  if (
+    authService.isManager()
   ) {
     return true;
   }
 
-  return router.createUrlTree(
-    ['/dashboard']
-  );
+  if (
+    authService.isPlatformOwner()
+  ) {
+    return router.createUrlTree([
+      '/platform'
+    ]);
+  }
+
+  return router.createUrlTree([
+    '/dashboard'
+  ]);
 };

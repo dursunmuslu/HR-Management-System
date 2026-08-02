@@ -1,8 +1,12 @@
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     Integer,
     String,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -15,6 +19,13 @@ class Company(Base):
     id = Column(
         Integer,
         primary_key=True,
+        index=True,
+    )
+
+    code = Column(
+        String(30),
+        unique=True,
+        nullable=False,
         index=True,
     )
 
@@ -40,6 +51,36 @@ class Company(Base):
         Boolean,
         nullable=False,
         default=True,
+        server_default="true",
+        index=True,
+    )
+
+    suspended_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    suspension_reason = Column(
+        String(500),
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    users = relationship(
+        "User",
+        back_populates="company",
     )
 
     departments = relationship(

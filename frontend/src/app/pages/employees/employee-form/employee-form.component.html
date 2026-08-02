@@ -1,22 +1,43 @@
 <section class="employee-form-page">
+
   <header class="page-header">
     <div>
-      <p class="page-eyebrow">Personel Yönetimi</p>
-      <h1>Yeni Personel Ekle</h1>
-      <p>Kullanıcı hesabı ve personel kaydı aynı anda oluşturulur.</p>
+      <p class="page-eyebrow">
+        Personel Yönetimi
+      </p>
+
+      <h1>
+        Yeni Personel Ekle
+      </h1>
+
+      <p>
+        Kullanıcı hesabı ve personel kaydı
+        aynı işlemde oluşturulur.
+      </p>
     </div>
 
-    <button type="button" class="back-button" (click)="goBack()">
+    <button
+      type="button"
+      class="back-button"
+      (click)="goBack()"
+    >
       ← Personel listesine dön
     </button>
   </header>
 
+
   @if (errorMessage) {
     <div class="error-alert">
-      <strong>Personel oluşturulamadı</strong>
-      <p>{{ errorMessage }}</p>
+      <strong>
+        Personel oluşturulamadı
+      </strong>
+
+      <p>
+        {{ errorMessage }}
+      </p>
     </div>
   }
+
 
   <form
     class="form-card"
@@ -24,85 +45,381 @@
     (ngSubmit)="submit()"
     novalidate
   >
+
     <div class="form-section">
+
       <div class="section-header">
         <span>1</span>
+
         <div>
           <h2>Giriş hesabı</h2>
-          <p>Personelin sisteme giriş yapacağı bilgileri girin.</p>
+
+          <p>
+            Personelin sisteme giriş yapacağı
+            bilgileri girin.
+          </p>
         </div>
       </div>
 
+
       <div class="form-grid">
+
         <div class="form-field">
-          <label for="username">Kullanıcı adı *</label>
-          <input id="username" type="text" formControlName="username" placeholder="hasan">
-          @if (controls.username.invalid && controls.username.touched) {
-            <small>En az 3 karakter girin.</small>
+          <label for="username">
+            Kullanıcı adı *
+          </label>
+
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            placeholder="ahmet.yilmaz"
+            autocomplete="off"
+          >
+
+          @if (
+            controls.username.invalid &&
+            controls.username.touched
+          ) {
+            <small>
+              3–50 karakter; yalnızca harf,
+              rakam, nokta, tire ve alt çizgi.
+            </small>
           }
         </div>
 
+
         <div class="form-field">
-          <label for="password">Geçici şifre *</label>
+          <label for="temporary_password">
+            Geçici şifre *
+          </label>
+
           <div class="password-field">
             <input
-              id="password"
-              [type]="showPassword ? 'text' : 'password'"
-              formControlName="password"
-              placeholder="En az 6 karakter"
+              id="temporary_password"
+              [type]="
+                showPassword
+                  ? 'text'
+                  : 'password'
+              "
+              formControlName="temporary_password"
+              placeholder="En az 8 karakter"
+              autocomplete="new-password"
             >
-            <button type="button" (click)="togglePassword()">
-              {{ showPassword ? 'Gizle' : 'Göster' }}
+
+            <button
+              type="button"
+              (click)="togglePassword()"
+            >
+              {{
+                showPassword
+                  ? 'Gizle'
+                  : 'Göster'
+              }}
             </button>
           </div>
-          @if (controls.password.invalid && controls.password.touched) {
-            <small>Şifre 6–72 karakter olmalıdır.</small>
+
+          @if (
+            controls.temporary_password.invalid &&
+            controls.temporary_password.touched
+          ) {
+            <small>
+              Şifre 8–72 karakter olmalıdır.
+            </small>
           }
+
+          <p class="field-hint">
+            Kullanıcı ilk girişinde bu şifreyi
+            değiştirmek zorundadır.
+          </p>
         </div>
+
       </div>
     </div>
 
+
     <div class="form-section">
+
       <div class="section-header">
         <span>2</span>
+
         <div>
           <h2>Kişisel bilgiler</h2>
-          <p>Personelin kimlik ve iletişim bilgilerini girin.</p>
+
+          <p>
+            Personelin kimlik ve iletişim
+            bilgilerini girin.
+          </p>
         </div>
       </div>
 
+
       <div class="form-grid">
-        <div class="form-field"><label for="first_name">Ad *</label><input id="first_name" formControlName="first_name"></div>
-        <div class="form-field"><label for="last_name">Soyad *</label><input id="last_name" formControlName="last_name"></div>
-        <div class="form-field"><label for="tc_no">TC Kimlik No *</label><input id="tc_no" maxlength="11" inputmode="numeric" formControlName="tc_no"></div>
-        <div class="form-field"><label for="phone">Telefon *</label><input id="phone" type="tel" formControlName="phone"></div>
-        <div class="form-field"><label for="email">E-posta *</label><input id="email" type="email" formControlName="email"></div>
+
+        <div class="form-field">
+          <label for="first_name">
+            Ad *
+          </label>
+
+          <input
+            id="first_name"
+            formControlName="first_name"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="last_name">
+            Soyad *
+          </label>
+
+          <input
+            id="last_name"
+            formControlName="last_name"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="tc_no">
+            TC Kimlik No *
+          </label>
+
+          <input
+            id="tc_no"
+            maxlength="11"
+            inputmode="numeric"
+            formControlName="tc_no"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="phone">
+            Telefon *
+          </label>
+
+          <input
+            id="phone"
+            type="tel"
+            formControlName="phone"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="email">
+            E-posta *
+          </label>
+
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+          >
+        </div>
+
       </div>
     </div>
+
 
     <div class="form-section">
+
       <div class="section-header">
         <span>3</span>
+
         <div>
           <h2>Çalışma bilgileri</h2>
-          <p>Şirket içi bilgileri girin.</p>
+
+          <p>
+            Personelin şirket içindeki
+            organizasyon bilgilerini belirleyin.
+          </p>
         </div>
       </div>
 
+
       <div class="form-grid">
-        <div class="form-field"><label for="employee_number">Personel numarası *</label><input id="employee_number" formControlName="employee_number"></div>
-        <div class="form-field"><label for="department">Departman *</label><input id="department" formControlName="department"></div>
-        <div class="form-field"><label for="position">Pozisyon *</label><input id="position" formControlName="position"></div>
-        <div class="form-field"><label for="hire_date">İşe giriş tarihi *</label><input id="hire_date" type="date" formControlName="hire_date"></div>
-        <div class="form-field"><label for="remaining_annual_leave">Yıllık izin hakkı *</label><input id="remaining_annual_leave" type="number" min="0" formControlName="remaining_annual_leave"></div>
+
+        <div class="form-field">
+          <label for="employee_number">
+            Personel numarası *
+          </label>
+
+          <input
+            id="employee_number"
+            formControlName="employee_number"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="department_id">
+            Departman *
+          </label>
+
+          <select
+            id="department_id"
+            formControlName="department_id"
+            [disabled]="isLoadingDepartments"
+          >
+            <option [ngValue]="0">
+              {{
+                isLoadingDepartments
+                  ? 'Departmanlar yükleniyor...'
+                  : 'Departman seçin'
+              }}
+            </option>
+
+            @for (
+              department of departments;
+              track department.id
+            ) {
+              <option
+                [ngValue]="department.id"
+              >
+                {{ department.name }}
+              </option>
+            }
+          </select>
+
+          @if (
+            controls.department_id.invalid &&
+            controls.department_id.touched
+          ) {
+            <small>
+              Bir departman seçmelisiniz.
+            </small>
+          }
+        </div>
+
+
+        <div class="form-field">
+          <label for="team_id">
+            Takım *
+          </label>
+
+          <select
+            id="team_id"
+            formControlName="team_id"
+            [disabled]="
+              !selectedDepartment ||
+              isLoadingTeams
+            "
+          >
+            <option [ngValue]="0">
+              @if (!selectedDepartment) {
+                Önce departman seçin
+              } @else if (isLoadingTeams) {
+                Takımlar yükleniyor...
+              } @else {
+                Takım seçin
+              }
+            </option>
+
+            @for (
+              team of teams;
+              track team.id
+            ) {
+              <option
+                [ngValue]="team.id"
+              >
+                {{ team.name }}
+              </option>
+            }
+          </select>
+
+          @if (
+            controls.team_id.invalid &&
+            controls.team_id.touched
+          ) {
+            <small>
+              Bir takım seçmelisiniz.
+            </small>
+          }
+
+          @if (
+            selectedDepartment &&
+            !isLoadingTeams &&
+            teams.length === 0
+          ) {
+            <small>
+              Bu departmanda aktif takım bulunmuyor.
+            </small>
+          }
+        </div>
+
+
+        <div class="form-field">
+          <label for="position">
+            Pozisyon *
+          </label>
+
+          <input
+            id="position"
+            formControlName="position"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="hire_date">
+            İşe giriş tarihi *
+          </label>
+
+          <input
+            id="hire_date"
+            type="date"
+            formControlName="hire_date"
+          >
+        </div>
+
+
+        <div class="form-field">
+          <label for="remaining_annual_leave">
+            Yıllık izin hakkı *
+          </label>
+
+          <input
+            id="remaining_annual_leave"
+            type="number"
+            min="0"
+            formControlName="remaining_annual_leave"
+          >
+        </div>
+
       </div>
     </div>
 
+
     <div class="form-actions">
-      <button type="button" class="cancel-button" [disabled]="isSubmitting" (click)="goBack()">Vazgeç</button>
-      <button type="submit" class="submit-button" [disabled]="isSubmitting">
-        {{ isSubmitting ? 'Oluşturuluyor...' : 'Personeli oluştur' }}
+
+      <button
+        type="button"
+        class="cancel-button"
+        [disabled]="isSubmitting"
+        (click)="goBack()"
+      >
+        Vazgeç
       </button>
+
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="
+          isSubmitting ||
+          isLoadingDepartments
+        "
+      >
+        {{
+          isSubmitting
+            ? 'Oluşturuluyor...'
+            : 'Personeli oluştur'
+        }}
+      </button>
+
     </div>
+
   </form>
+
 </section>

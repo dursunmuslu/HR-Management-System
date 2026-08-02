@@ -1,8 +1,15 @@
-from fastapi import HTTPException, status
+from fastapi import (
+    HTTPException,
+    status,
+)
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import (
+    Session,
+    joinedload,
+)
 
 from app.models.employee import Employee
+from app.models.team import Team
 from app.models.user import User
 from app.repositories.employee_repository import (
     EmployeeRepository,
@@ -11,7 +18,6 @@ from app.repositories.user_repository import (
     UserRepository,
 )
 from app.schemas.employee_schema import (
-    EmployeeCreate,
     EmployeeCreateWithUser,
     EmployeeUpdate,
     LeaveBalanceResponse,
@@ -25,20 +31,44 @@ class EmployeeService:
     @staticmethod
     def get_all(
         db: Session,
+        current_user: User,
     ) -> list[Employee]:
-        return EmployeeRepository.find_all(db)
+        company_id = (
+            EmployeeService
+            ._require_company_id(current_user)
+        )
+
+        return (
+            EmployeeRepository
+            .find_all_by_company(
+                db,
+                company_id,
+            )
+        )
 
     @staticmethod
     def get_by_id(
         db: Session,
         employee_id: int,
+        current_user: User,
     ) -> Employee:
-        employee = EmployeeRepository.find_by_id(
-            db,
-            employee_id,
+        company_id = (
+            EmployeeService
+            ._require_company_id(current_user)
+        )
+
+        employee = (
+            EmployeeRepository
+            .find_by_id_and_company(
+                db,
+                employee_id,
+                company_id,
+            )
         )
 
         if employee is None:
+            # Başka şirkette bu ID var mı
+            # bilgisini açıklamıyoruz.
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Employee could not be found.",
@@ -51,17 +81,31 @@ class EmployeeService:
         db: Session,
         current_user: User,
     ) -> Employee:
-        employee = EmployeeRepository.find_by_user_id(
-            db,
-            current_user.id,
+        employee = (
+            EmployeeRepository.find_by_user_id(
+                db,
+                current_user.id,
+            )
         )
 
         if employee is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
-                    "Employee profile could not be found "
-                    "for the current user."
+                    "Employee profile could not be "
+                    "found for the current user."
+                ),
+            )
+
+        if (
+            employee.user.company_id !=
+            current_user.company_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Employee profile could not be "
+                    "found for the current user."
                 ),
             )
 
@@ -79,7 +123,9 @@ class EmployeeService:
 
         return LeaveBalanceResponse(
             employee_id=employee.id,
-            employee_number=employee.employee_number,
+            employee_number=(
+                employee.employee_number
+            ),
             first_name=employee.first_name,
             last_name=employee.last_name,
             remaining_annual_leave=(
@@ -91,206 +137,24 @@ class EmployeeService:
     def create_with_user(
         db: Session,
         request: EmployeeCreateWithUser,
+        current_user: User,
     ) -> Employee:
-        """
-        Kullanıcı hesabını ve personel profilini
-        aynı transaction içerisinde oluşturur.
-        """
+        company_id = (
+            EmployeeService
+            ._require_company_id(current_user)
+        )
+
+        team = EmployeeService._get_team_for_company(
+            db=db,
+            team_id=request.team_id,
+            company_id=company_id,
+        )
 
         normalized_username = (
             request.username
             .strip()
             .lower()
         )
-
-        normalized_tc_no = (
-            request.tc_no
-            .strip()
-        )
-
-        normalized_employee_number = (
-            request.employee_number
-            .strip()
-        )
-
-        normalized_email = (
-            str(request.email)
-            .strip()
-            .lower()
-        )
-
-        normalized_phone = (
-            request.phone
-            .strip()
-        )
-
-        existing_user = UserRepository.find_by_username(
-            db,
-            normalized_username,
-        )
-
-        if existing_user is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Username already exists.",
-            )
-
-        existing_tc = EmployeeRepository.find_by_tc_no(
-            db,
-            normalized_tc_no,
-        )
-
-        if existing_tc is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this identification "
-                    "number already exists."
-                ),
-            )
-
-        existing_employee_number = (
-            EmployeeRepository.find_by_employee_number(
-                db,
-                normalized_employee_number,
-            )
-        )
-
-        if existing_employee_number is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this employee "
-                    "number already exists."
-                ),
-            )
-
-        existing_email = EmployeeRepository.find_by_email(
-            db,
-            normalized_email,
-        )
-
-        if existing_email is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this email "
-                    "already exists."
-                ),
-            )
-
-        user = User(
-            username=normalized_username,
-            password=hash_password(
-                request.password
-            ),
-            role=UserRole.PERSONEL.value,
-        )
-
-        try:
-            db.add(user)
-            db.flush()
-
-            employee = Employee(
-                user_id=user.id,
-                first_name=request.first_name.strip(),
-                last_name=request.last_name.strip(),
-                tc_no=normalized_tc_no,
-                employee_number=(
-                    normalized_employee_number
-                ),
-                department=request.department.strip(),
-                position=request.position.strip(),
-                phone=normalized_phone,
-                email=normalized_email,
-                hire_date=request.hire_date,
-                remaining_annual_leave=(
-                    request.remaining_annual_leave
-                ),
-            )
-
-            db.add(employee)
-            db.commit()
-            db.refresh(employee)
-
-            created_employee = (
-                EmployeeRepository.find_by_id(
-                    db,
-                    employee.id,
-                )
-            )
-
-            if created_employee is None:
-                raise HTTPException(
-                    status_code=(
-                        status.HTTP_500_INTERNAL_SERVER_ERROR
-                    ),
-                    detail=(
-                        "Created employee could not be loaded."
-                    ),
-                )
-
-            return created_employee
-
-        except IntegrityError as exception:
-            db.rollback()
-
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Username, identification number, "
-                    "employee number or email already exists."
-                ),
-            ) from exception
-
-        except HTTPException:
-            db.rollback()
-            raise
-
-        except Exception as exception:
-            db.rollback()
-
-            raise HTTPException(
-                status_code=(
-                    status.HTTP_500_INTERNAL_SERVER_ERROR
-                ),
-                detail=(
-                    "Employee and user account could not "
-                    "be created."
-                ),
-            ) from exception
-
-    @staticmethod
-    def create(
-        db: Session,
-        request: EmployeeCreate,
-    ) -> Employee:
-        user = UserRepository.find_by_id(
-            db,
-            request.user_id,
-        )
-
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User could not be found.",
-            )
-
-        existing_user_employee = (
-            EmployeeRepository.find_by_user_id(
-                db,
-                request.user_id,
-            )
-        )
-
-        if existing_user_employee is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee profile already exists "
-                    "for this user."
-                ),
-            )
 
         normalized_tc_no = (
             request.tc_no.strip()
@@ -306,102 +170,146 @@ class EmployeeService:
             .lower()
         )
 
-        if (
-            EmployeeRepository.find_by_tc_no(
-                db,
-                normalized_tc_no,
-            )
-            is not None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this identification "
-                    "number already exists."
-                ),
-            )
-
-        if (
-            EmployeeRepository.find_by_employee_number(
-                db,
-                normalized_employee_number,
-            )
-            is not None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this employee "
-                    "number already exists."
-                ),
-            )
-
-        if (
-            EmployeeRepository.find_by_email(
-                db,
-                normalized_email,
-            )
-            is not None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "An employee with this email "
-                    "already exists."
-                ),
-            )
-
-        employee = Employee(
-            user_id=request.user_id,
-            first_name=request.first_name.strip(),
-            last_name=request.last_name.strip(),
-            tc_no=normalized_tc_no,
-            employee_number=normalized_employee_number,
-            department=request.department.strip(),
-            position=request.position.strip(),
-            phone=request.phone.strip(),
-            email=normalized_email,
-            hire_date=request.hire_date,
-            remaining_annual_leave=(
-                request.remaining_annual_leave
-            ),
+        normalized_phone = (
+            request.phone.strip()
         )
 
-        created_employee = (
-            EmployeeRepository.create(
+        EmployeeService._validate_unique_fields(
+            db=db,
+            username=normalized_username,
+            tc_no=normalized_tc_no,
+            employee_number=(
+                normalized_employee_number
+            ),
+            email=normalized_email,
+        )
+
+        user = User(
+            company_id=company_id,
+            username=normalized_username,
+            password=hash_password(
+                request.temporary_password
+            ),
+            role=UserRole.PERSONEL.value,
+            is_active=True,
+            must_change_password=True,
+        )
+
+        try:
+            UserRepository.add(
+                db,
+                user,
+            )
+
+            employee = Employee(
+                user_id=user.id,
+                team_id=team.id,
+
+                first_name=(
+                    request.first_name.strip()
+                ),
+                last_name=(
+                    request.last_name.strip()
+                ),
+
+                tc_no=normalized_tc_no,
+                employee_number=(
+                    normalized_employee_number
+                ),
+
+                # Geçiş dönemi için eski alanı
+                # seçilen departman adıyla dolduruyoruz.
+                department=(
+                    team.department.name
+                ),
+
+                position=(
+                    request.position.strip()
+                ),
+                phone=normalized_phone,
+                email=normalized_email,
+                hire_date=request.hire_date,
+                remaining_annual_leave=(
+                    request.remaining_annual_leave
+                ),
+            )
+
+            EmployeeRepository.add(
                 db,
                 employee,
             )
-        )
 
-        loaded_employee = (
-            EmployeeRepository.find_by_id(
-                db,
-                created_employee.id,
+            db.commit()
+
+            created_employee = (
+                EmployeeRepository
+                .find_by_id_and_company(
+                    db,
+                    employee.id,
+                    company_id,
+                )
             )
-        )
 
-        if loaded_employee is None:
+            if created_employee is None:
+                raise HTTPException(
+                    status_code=(
+                        status
+                        .HTTP_500_INTERNAL_SERVER_ERROR
+                    ),
+                    detail=(
+                        "Created employee could not "
+                        "be loaded."
+                    ),
+                )
+
+            return created_employee
+
+        except IntegrityError as exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Username, identification number, "
+                    "employee number or email already "
+                    "exists."
+                ),
+            ) from exception
+
+        except HTTPException:
+            db.rollback()
+            raise
+
+        except Exception as exception:
+            db.rollback()
+
             raise HTTPException(
                 status_code=(
-                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status
+                    .HTTP_500_INTERNAL_SERVER_ERROR
                 ),
                 detail=(
-                    "Created employee could not be loaded."
+                    "Employee and user account could "
+                    "not be created."
                 ),
-            )
-
-        return loaded_employee
+            ) from exception
 
     @staticmethod
     def update(
         db: Session,
         employee_id: int,
         request: EmployeeUpdate,
+        current_user: User,
     ) -> Employee:
+        company_id = (
+            EmployeeService
+            ._require_company_id(current_user)
+        )
+
         employee = EmployeeService.get_by_id(
-            db,
-            employee_id,
+            db=db,
+            employee_id=employee_id,
+            current_user=current_user,
         )
 
         update_data = request.model_dump(
@@ -412,9 +320,29 @@ class EmployeeService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "At least one field must be provided "
-                    "for update."
+                    "At least one field must be "
+                    "provided for update."
                 ),
+            )
+
+        if "team_id" in update_data:
+            team = (
+                EmployeeService
+                ._get_team_for_company(
+                    db=db,
+                    team_id=update_data["team_id"],
+                    company_id=company_id,
+                )
+            )
+
+            employee.team_id = team.id
+            employee.department = (
+                team.department.name
+            )
+
+            update_data.pop(
+                "team_id",
+                None,
             )
 
         if "tc_no" in update_data:
@@ -431,14 +359,17 @@ class EmployeeService:
 
             if (
                 existing_employee is not None
-                and existing_employee.id != employee.id
+                and existing_employee.id !=
+                employee.id
             ):
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=(
+                        status.HTTP_409_CONFLICT
+                    ),
                     detail=(
                         "An employee with this "
-                        "identification number already "
-                        "exists."
+                        "identification number "
+                        "already exists."
                     ),
                 )
 
@@ -463,13 +394,17 @@ class EmployeeService:
 
             if (
                 existing_employee is not None
-                and existing_employee.id != employee.id
+                and existing_employee.id !=
+                employee.id
             ):
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=(
+                        status.HTTP_409_CONFLICT
+                    ),
                     detail=(
-                        "An employee with this employee "
-                        "number already exists."
+                        "An employee with this "
+                        "employee number already "
+                        "exists."
                     ),
                 )
 
@@ -493,13 +428,16 @@ class EmployeeService:
 
             if (
                 existing_employee is not None
-                and existing_employee.id != employee.id
+                and existing_employee.id !=
+                employee.id
             ):
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=(
+                        status.HTTP_409_CONFLICT
+                    ),
                     detail=(
-                        "An employee with this email "
-                        "already exists."
+                        "An employee with this "
+                        "email already exists."
                     ),
                 )
 
@@ -510,15 +448,20 @@ class EmployeeService:
         string_fields = [
             "first_name",
             "last_name",
-            "department",
             "position",
             "phone",
         ]
 
         for field_name in string_fields:
-            if field_name in update_data:
+            if (
+                field_name in update_data
+                and update_data[field_name]
+                is not None
+            ):
                 update_data[field_name] = (
-                    update_data[field_name].strip()
+                    update_data[
+                        field_name
+                    ].strip()
                 )
 
         for field_name, field_value in (
@@ -530,41 +473,81 @@ class EmployeeService:
                 field_value,
             )
 
-        saved_employee = (
-            EmployeeRepository.save(
-                db,
-                employee,
-            )
-        )
+        try:
+            db.add(employee)
+            db.commit()
 
-        loaded_employee = (
-            EmployeeRepository.find_by_id(
-                db,
-                saved_employee.id,
+            loaded_employee = (
+                EmployeeRepository
+                .find_by_id_and_company(
+                    db,
+                    employee.id,
+                    company_id,
+                )
             )
-        )
 
-        if loaded_employee is None:
+            if loaded_employee is None:
+                raise HTTPException(
+                    status_code=(
+                        status
+                        .HTTP_500_INTERNAL_SERVER_ERROR
+                    ),
+                    detail=(
+                        "Updated employee could not "
+                        "be loaded."
+                    ),
+                )
+
+            return loaded_employee
+
+        except IntegrityError as exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Identification number, employee "
+                    "number or email already exists."
+                ),
+            ) from exception
+
+        except HTTPException:
+            db.rollback()
+            raise
+
+        except Exception as exception:
+            db.rollback()
+
             raise HTTPException(
                 status_code=(
-                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status
+                    .HTTP_500_INTERNAL_SERVER_ERROR
                 ),
                 detail=(
-                    "Updated employee could not be loaded."
+                    "Employee could not be updated."
                 ),
-            )
-
-        return loaded_employee
+            ) from exception
 
     @staticmethod
     def delete(
         db: Session,
         employee_id: int,
+        current_user: User,
     ) -> None:
         employee = EmployeeService.get_by_id(
-            db,
-            employee_id,
+            db=db,
+            employee_id=employee_id,
+            current_user=current_user,
         )
+
+        if employee.user_id == current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "You cannot delete your own "
+                    "employee account."
+                ),
+            )
 
         try:
             user = employee.user
@@ -581,9 +564,127 @@ class EmployeeService:
 
             raise HTTPException(
                 status_code=(
-                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status
+                    .HTTP_500_INTERNAL_SERVER_ERROR
                 ),
                 detail=(
                     "Employee could not be deleted."
                 ),
             ) from exception
+
+    @staticmethod
+    def _require_company_id(
+        current_user: User,
+    ) -> int:
+        if current_user.company_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "User account is not associated "
+                    "with a company."
+                ),
+            )
+
+        return current_user.company_id
+
+    @staticmethod
+    def _get_team_for_company(
+        db: Session,
+        team_id: int,
+        company_id: int,
+    ) -> Team:
+        team = (
+            db.query(Team)
+            .options(
+                joinedload(Team.department)
+            )
+            .filter(
+                Team.id == team_id,
+                Team.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if (
+            team is None
+            or team.department is None
+            or not team.department.is_active
+            or team.department.company_id !=
+            company_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "An active team could not be "
+                    "found in your company."
+                ),
+            )
+
+        return team
+
+    @staticmethod
+    def _validate_unique_fields(
+        db: Session,
+        username: str,
+        tc_no: str,
+        employee_number: str,
+        email: str,
+    ) -> None:
+        if (
+            UserRepository.find_by_username(
+                db,
+                username,
+            )
+            is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already exists.",
+            )
+
+        if (
+            EmployeeRepository.find_by_tc_no(
+                db,
+                tc_no,
+            )
+            is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "An employee with this "
+                    "identification number already "
+                    "exists."
+                ),
+            )
+
+        if (
+            EmployeeRepository
+            .find_by_employee_number(
+                db,
+                employee_number,
+            )
+            is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "An employee with this employee "
+                    "number already exists."
+                ),
+            )
+
+        if (
+            EmployeeRepository.find_by_email(
+                db,
+                email,
+            )
+            is not None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "An employee with this email "
+                    "already exists."
+                ),
+            )

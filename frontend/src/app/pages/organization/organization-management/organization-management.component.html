@@ -6,11 +6,13 @@
         Organizasyon Yönetimi
       </p>
 
-      <h1>Şirket Yapısı</h1>
+      <h1>
+        {{ company?.name || 'Şirket Yapısı' }}
+      </h1>
 
       <p>
-        Şirket, departman ve takım yapısını
-        merkezi olarak yönetin.
+        Şirket bilgilerinizi, departmanlarınızı
+        ve takımlarınızı yönetin.
       </p>
     </div>
   </header>
@@ -27,112 +29,93 @@
     </div>
   }
 
-  <div class="organization-grid">
+  @if (isLoading) {
+    <p class="state-text">
+      Organizasyon bilgileri yükleniyor...
+    </p>
+  } @else {
 
-    <section class="organization-column">
-      <div class="column-header">
+    <section class="company-card">
+      <div class="company-card-header">
         <div>
-          <span>1</span>
-          <h2>Şirketler</h2>
+          <span class="company-code">
+            {{ company?.code }}
+          </span>
+
+          <h2>
+            Şirket Bilgileri
+          </h2>
         </div>
 
-        <strong>
-          {{ companies.length }}
-        </strong>
+        <span
+          class="status-badge"
+          [class.inactive]="!company?.is_active"
+        >
+          {{
+            company?.is_active
+              ? 'Aktif'
+              : 'Pasif'
+          }}
+        </span>
       </div>
 
       <form
+        class="company-form"
         [formGroup]="companyForm"
-        (ngSubmit)="createCompany()"
+        (ngSubmit)="updateCompany()"
       >
-        <input
-          type="text"
-          formControlName="name"
-          placeholder="Şirket adı"
-        >
+        <label>
+          <span>Şirket adı</span>
 
-        <input
-          type="text"
-          formControlName="tax_number"
-          placeholder="Vergi numarası"
-        >
+          <input
+            type="text"
+            formControlName="name"
+          >
+        </label>
 
-        <textarea
-          formControlName="address"
-          placeholder="Adres"
-        ></textarea>
+        <label>
+          <span>Vergi numarası</span>
 
-        <button
-          type="submit"
-          [disabled]="isSubmitting"
-        >
-          Şirket ekle
-        </button>
-      </form>
+          <input
+            type="text"
+            formControlName="tax_number"
+          >
+        </label>
 
-      @if (isLoadingCompanies) {
-        <p class="state-text">
-          Şirketler yükleniyor...
-        </p>
-      } @else {
-        <div class="item-list">
-          @for (
-            company of companies;
-            track company.id
-          ) {
-            <article
-              class="organization-item"
-              [class.selected]="
-                selectedCompanyId === company.id
-              "
-              (click)="selectCompany(company)"
-            >
-              <div>
-                <strong>
-                  {{ company.name }}
-                </strong>
+        <label class="full-width">
+          <span>Adres</span>
 
-                <small>
-                  {{
-                    company.tax_number ||
-                    'Vergi numarası yok'
-                  }}
-                </small>
-              </div>
+          <textarea
+            formControlName="address"
+          ></textarea>
+        </label>
 
-              <button
-                type="button"
-                (click)="
-                  $event.stopPropagation();
-                  deleteCompany(company)
-                "
-              >
-                Sil
-              </button>
-            </article>
-          }
+        <div class="full-width form-actions">
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
+          >
+            Şirket bilgilerini güncelle
+          </button>
         </div>
-      }
+      </form>
     </section>
 
-    <section class="organization-column">
-      <div class="column-header">
-        <div>
-          <span>2</span>
-          <h2>Departmanlar</h2>
+    <div class="organization-grid">
+
+      <section class="organization-column">
+
+        <div class="column-header">
+          <div>
+            <span>1</span>
+            <h2>Departmanlar</h2>
+          </div>
+
+          <strong>
+            {{ departments.length }}
+          </strong>
         </div>
 
-        <strong>
-          {{ departments.length }}
-        </strong>
-      </div>
-
-      @if (!selectedCompanyId) {
-        <p class="state-text">
-          Departmanları görmek için
-          bir şirket seçin.
-        </p>
-      } @else {
         <form
           [formGroup]="departmentForm"
           (ngSubmit)="createDepartment()"
@@ -156,41 +139,70 @@
           </button>
         </form>
 
-        @if (isLoadingDepartments) {
-          <p class="state-text">
-            Departmanlar yükleniyor...
-          </p>
-        } @else {
-          <div class="item-list">
-            @for (
-              department of departments;
-              track department.id
-            ) {
-              <article
-                class="organization-item"
-                [class.selected]="
-                  selectedDepartmentId ===
-                  department.id
-                "
-                (click)="
-                  selectDepartment(department)
-                "
-              >
-                <div>
-                  <strong>
-                    {{ department.name }}
-                  </strong>
+        <div class="item-list">
 
-                  <small>
-                    {{
-                      department.description ||
-                      'Açıklama yok'
-                    }}
-                  </small>
-                </div>
+          @for (
+            department of departments;
+            track department.id
+          ) {
+            <article
+              class="organization-item"
+              [class.selected]="
+                selectedDepartmentId ===
+                department.id
+              "
+              [class.inactive-item]="
+                !department.is_active
+              "
+              (click)="
+                selectDepartment(department)
+              "
+            >
+              <div class="item-content">
+                <strong>
+                  {{ department.name }}
+                </strong>
+
+                <small>
+                  {{
+                    department.description ||
+                    'Açıklama yok'
+                  }}
+                </small>
+
+                <span
+                  class="inline-status"
+                  [class.inactive]="
+                    !department.is_active
+                  "
+                >
+                  {{
+                    department.is_active
+                      ? 'Aktif'
+                      : 'Pasif'
+                  }}
+                </span>
+              </div>
+
+              <div class="item-actions">
+                <button
+                  type="button"
+                  class="secondary-action"
+                  (click)="
+                    $event.stopPropagation();
+                    toggleDepartment(department)
+                  "
+                >
+                  {{
+                    department.is_active
+                      ? 'Pasife al'
+                      : 'Aktifleştir'
+                  }}
+                </button>
 
                 <button
                   type="button"
+                  class="danger-action"
                   (click)="
                     $event.stopPropagation();
                     deleteDepartment(department)
@@ -198,90 +210,158 @@
                 >
                   Sil
                 </button>
-              </article>
-            }
-          </div>
-        }
-      }
-    </section>
+              </div>
+            </article>
+          } @empty {
+            <p class="state-text">
+              Henüz departman bulunmuyor.
+            </p>
+          }
 
-    <section class="organization-column">
-      <div class="column-header">
-        <div>
-          <span>3</span>
-          <h2>Takımlar</h2>
         </div>
 
-        <strong>
-          {{ teams.length }}
-        </strong>
-      </div>
+      </section>
 
-      @if (!selectedDepartmentId) {
-        <p class="state-text">
-          Takımları görmek için
-          bir departman seçin.
-        </p>
-      } @else {
-        <form
-          [formGroup]="teamForm"
-          (ngSubmit)="createTeam()"
-        >
-          <input
-            type="text"
-            formControlName="name"
-            placeholder="Takım adı"
-          >
+      <section class="organization-column">
 
-          <textarea
-            formControlName="description"
-            placeholder="Açıklama"
-          ></textarea>
+        <div class="column-header">
+          <div>
+            <span>2</span>
+            <h2>Takımlar</h2>
+          </div>
 
-          <button
-            type="submit"
-            [disabled]="isSubmitting"
-          >
-            Takım ekle
-          </button>
-        </form>
+          <strong>
+            {{ teams.length }}
+          </strong>
+        </div>
 
-        @if (isLoadingTeams) {
+        @if (!selectedDepartmentId) {
           <p class="state-text">
-            Takımlar yükleniyor...
+            Takımları görmek için
+            bir departman seçin.
           </p>
         } @else {
-          <div class="item-list">
-            @for (
-              team of teams;
-              track team.id
-            ) {
-              <article class="organization-item">
-                <div>
-                  <strong>
-                    {{ team.name }}
-                  </strong>
 
-                  <small>
-                    {{
-                      team.description ||
-                      'Açıklama yok'
-                    }}
-                  </small>
-                </div>
-
-                <button
-                  type="button"
-                  (click)="deleteTeam(team)"
-                >
-                  Sil
-                </button>
-              </article>
-            }
+          <div class="selected-info">
+            Seçili departman:
+            <strong>
+              {{ selectedDepartment?.name }}
+            </strong>
           </div>
-        }
-      }
-    </section>
 
-  </div>
+          <form
+            [formGroup]="teamForm"
+            (ngSubmit)="createTeam()"
+          >
+            <input
+              type="text"
+              formControlName="name"
+              placeholder="Takım adı"
+            >
+
+            <textarea
+              formControlName="description"
+              placeholder="Açıklama"
+            ></textarea>
+
+            <button
+              type="submit"
+              [disabled]="
+                isSubmitting ||
+                !selectedDepartment?.is_active
+              "
+            >
+              Takım ekle
+            </button>
+          </form>
+
+          @if (!selectedDepartment?.is_active) {
+            <p class="warning-text">
+              Pasif bir departmana yeni takım
+              eklenemez.
+            </p>
+          }
+
+          @if (isLoadingTeams) {
+            <p class="state-text">
+              Takımlar yükleniyor...
+            </p>
+          } @else {
+            <div class="item-list">
+
+              @for (
+                team of teams;
+                track team.id
+              ) {
+                <article
+                  class="organization-item"
+                  [class.inactive-item]="
+                    !team.is_active
+                  "
+                >
+                  <div class="item-content">
+                    <strong>
+                      {{ team.name }}
+                    </strong>
+
+                    <small>
+                      {{
+                        team.description ||
+                        'Açıklama yok'
+                      }}
+                    </small>
+
+                    <span
+                      class="inline-status"
+                      [class.inactive]="
+                        !team.is_active
+                      "
+                    >
+                      {{
+                        team.is_active
+                          ? 'Aktif'
+                          : 'Pasif'
+                      }}
+                    </span>
+                  </div>
+
+                  <div class="item-actions">
+                    <button
+                      type="button"
+                      class="secondary-action"
+                      (click)="toggleTeam(team)"
+                    >
+                      {{
+                        team.is_active
+                          ? 'Pasife al'
+                          : 'Aktifleştir'
+                      }}
+                    </button>
+
+                    <button
+                      type="button"
+                      class="danger-action"
+                      (click)="deleteTeam(team)"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </article>
+              } @empty {
+                <p class="state-text">
+                  Bu departmanda henüz takım yok.
+                </p>
+              }
+
+            </div>
+          }
+
+        }
+
+      </section>
+
+    </div>
+
+  }
+
 </section>

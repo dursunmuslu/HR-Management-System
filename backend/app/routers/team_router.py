@@ -13,8 +13,12 @@ from app.schemas.team_schema import (
     TeamResponse,
     TeamUpdate,
 )
-from app.security.auth_dependency import require_manager
-from app.services.team_service import TeamService
+from app.security.auth_dependency import (
+    require_manager,
+)
+from app.services.team_service import (
+    TeamService,
+)
 
 
 router = APIRouter(
@@ -29,9 +33,14 @@ router = APIRouter(
 )
 def get_teams(
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
-    return TeamService.get_all(db)
+    return TeamService.get_all(
+        db=db,
+        current_user=current_user,
+    )
 
 
 @router.get(
@@ -41,11 +50,32 @@ def get_teams(
 def get_teams_by_department(
     department_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return TeamService.get_by_department(
-        db,
-        department_id,
+        db=db,
+        department_id=department_id,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/{team_id}",
+    response_model=TeamResponse,
+)
+def get_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_manager
+    ),
+):
+    return TeamService.get_by_id(
+        db=db,
+        team_id=team_id,
+        current_user=current_user,
     )
 
 
@@ -57,11 +87,14 @@ def get_teams_by_department(
 def create_team(
     request: TeamCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return TeamService.create(
-        db,
-        request,
+        db=db,
+        request=request,
+        current_user=current_user,
     )
 
 
@@ -73,12 +106,51 @@ def update_team(
     team_id: int,
     request: TeamUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return TeamService.update(
-        db,
-        team_id,
-        request,
+        db=db,
+        team_id=team_id,
+        request=request,
+        current_user=current_user,
+    )
+
+
+@router.patch(
+    "/{team_id}/deactivate",
+    response_model=TeamResponse,
+)
+def deactivate_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_manager
+    ),
+):
+    return TeamService.deactivate(
+        db=db,
+        team_id=team_id,
+        current_user=current_user,
+    )
+
+
+@router.patch(
+    "/{team_id}/activate",
+    response_model=TeamResponse,
+)
+def activate_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_manager
+    ),
+):
+    return TeamService.activate(
+        db=db,
+        team_id=team_id,
+        current_user=current_user,
     )
 
 
@@ -89,11 +161,14 @@ def update_team(
 def delete_team(
     team_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     TeamService.delete(
-        db,
-        team_id,
+        db=db,
+        team_id=team_id,
+        current_user=current_user,
     )
 
     return Response(

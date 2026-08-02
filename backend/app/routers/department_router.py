@@ -13,7 +13,9 @@ from app.schemas.department_schema import (
     DepartmentResponse,
     DepartmentUpdate,
 )
-from app.security.auth_dependency import require_manager
+from app.security.auth_dependency import (
+    require_manager,
+)
 from app.services.department_service import (
     DepartmentService,
 )
@@ -31,23 +33,31 @@ router = APIRouter(
 )
 def get_departments(
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
-    return DepartmentService.get_all(db)
+    return DepartmentService.get_all(
+        db=db,
+        current_user=current_user,
+    )
 
 
 @router.get(
-    "/company/{company_id}",
-    response_model=list[DepartmentResponse],
+    "/{department_id}",
+    response_model=DepartmentResponse,
 )
-def get_departments_by_company(
-    company_id: int,
+def get_department(
+    department_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
-    return DepartmentService.get_by_company(
-        db,
-        company_id,
+    return DepartmentService.get_by_id(
+        db=db,
+        department_id=department_id,
+        current_user=current_user,
     )
 
 
@@ -59,11 +69,14 @@ def get_departments_by_company(
 def create_department(
     request: DepartmentCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return DepartmentService.create(
-        db,
-        request,
+        db=db,
+        request=request,
+        current_user=current_user,
     )
 
 
@@ -75,12 +88,51 @@ def update_department(
     department_id: int,
     request: DepartmentUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return DepartmentService.update(
-        db,
-        department_id,
-        request,
+        db=db,
+        department_id=department_id,
+        request=request,
+        current_user=current_user,
+    )
+
+
+@router.patch(
+    "/{department_id}/deactivate",
+    response_model=DepartmentResponse,
+)
+def deactivate_department(
+    department_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_manager
+    ),
+):
+    return DepartmentService.deactivate(
+        db=db,
+        department_id=department_id,
+        current_user=current_user,
+    )
+
+
+@router.patch(
+    "/{department_id}/activate",
+    response_model=DepartmentResponse,
+)
+def activate_department(
+    department_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_manager
+    ),
+):
+    return DepartmentService.activate(
+        db=db,
+        department_id=department_id,
+        current_user=current_user,
     )
 
 
@@ -91,11 +143,14 @@ def update_department(
 def delete_department(
     department_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     DepartmentService.delete(
-        db,
-        department_id,
+        db=db,
+        department_id=department_id,
+        current_user=current_user,
     )
 
     return Response(

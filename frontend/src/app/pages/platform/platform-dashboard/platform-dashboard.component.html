@@ -1,0 +1,518 @@
+<section class="platform-page">
+
+  <header class="page-header">
+
+    <div>
+      <p class="page-eyebrow">
+        Platform Yönetimi
+      </p>
+
+      <h1>
+        Sistem Sahibi Paneli
+      </h1>
+
+      <p>
+        Şirketleri, kullanıcı sayılarını
+        ve platform erişimlerini yönetin.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="primary-button"
+      (click)="toggleCreateForm()"
+    >
+      {{
+        showCreateForm
+          ? 'Formu kapat'
+          : '+ Yeni şirket'
+      }}
+    </button>
+
+  </header>
+
+
+  @if (successMessage) {
+    <div class="alert success">
+      {{ successMessage }}
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="alert error">
+      {{ errorMessage }}
+    </div>
+  }
+
+
+  @if (isLoading) {
+
+    <div class="loading-card">
+      Platform bilgileri yükleniyor...
+    </div>
+
+  } @else {
+
+    <section class="summary-grid">
+
+      <article class="summary-card">
+        <span>Toplam şirket</span>
+        <strong>
+          {{ summary?.total_companies || 0 }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span>Aktif şirket</span>
+        <strong>
+          {{ summary?.active_companies || 0 }}
+        </strong>
+      </article>
+
+      <article class="summary-card danger">
+        <span>Askıya alınmış</span>
+        <strong>
+          {{ summary?.suspended_companies || 0 }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span>Toplam kullanıcı</span>
+        <strong>
+          {{ summary?.total_users || 0 }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span>Şirket yöneticisi</span>
+        <strong>
+          {{ summary?.total_managers || 0 }}
+        </strong>
+      </article>
+
+      <article class="summary-card">
+        <span>Personel</span>
+        <strong>
+          {{ summary?.total_employees || 0 }}
+        </strong>
+      </article>
+
+    </section>
+
+
+    @if (showCreateForm) {
+
+      <section class="create-card">
+
+        <div class="section-title">
+          <div>
+            <p class="page-eyebrow">
+              Yeni Kurulum
+            </p>
+
+            <h2>
+              Şirket ve ilk yöneticiyi oluştur
+            </h2>
+
+            <p>
+              Şirket ve ilk yönetici aynı işlemde
+              oluşturulur. Yönetici ilk girişte
+              şifresini değiştirmek zorundadır.
+            </p>
+          </div>
+        </div>
+
+
+        <form
+          [formGroup]="companyForm"
+          (ngSubmit)="createCompany()"
+        >
+
+          <div class="form-section">
+
+            <h3>
+              Şirket bilgileri
+            </h3>
+
+            <div class="form-grid">
+
+              <label>
+                <span>Şirket adı *</span>
+
+                <input
+                  type="text"
+                  formControlName="name"
+                  placeholder="ABC Teknoloji"
+                >
+              </label>
+
+
+              <label>
+                <span>Şirket kodu *</span>
+
+                <input
+                  type="text"
+                  formControlName="code"
+                  placeholder="ABC-001"
+                >
+
+                @if (
+                  controls.code.invalid &&
+                  controls.code.touched
+                ) {
+                  <small>
+                    Yalnızca harf, rakam,
+                    tire ve alt çizgi kullanın.
+                  </small>
+                }
+              </label>
+
+
+              <label>
+                <span>Vergi numarası</span>
+
+                <input
+                  type="text"
+                  formControlName="tax_number"
+                >
+              </label>
+
+
+              <label>
+                <span>Adres</span>
+
+                <input
+                  type="text"
+                  formControlName="address"
+                >
+              </label>
+
+            </div>
+
+          </div>
+
+
+          <div class="form-section">
+
+            <h3>
+              İlk şirket yöneticisi
+            </h3>
+
+            <div class="form-grid">
+
+              <label>
+                <span>Yönetici kullanıcı adı *</span>
+
+                <input
+                  type="text"
+                  formControlName="admin_username"
+                  placeholder="mehmet.yilmaz"
+                  autocomplete="off"
+                >
+              </label>
+
+
+              <label>
+                <span>Geçici şifre *</span>
+
+                <div class="password-field">
+
+                  <input
+                    [type]="
+                      showPassword
+                        ? 'text'
+                        : 'password'
+                    "
+                    formControlName="temporary_password"
+                    placeholder="En az 8 karakter"
+                    autocomplete="new-password"
+                  >
+
+                  <button
+                    type="button"
+                    (click)="togglePassword()"
+                  >
+                    {{
+                      showPassword
+                        ? 'Gizle'
+                        : 'Göster'
+                    }}
+                  </button>
+
+                </div>
+
+                <small class="hint">
+                  Bu şifreyi yöneticiye güvenli
+                  bir kanaldan iletin.
+                </small>
+              </label>
+
+            </div>
+
+          </div>
+
+
+          <div class="form-actions">
+
+            <button
+              type="button"
+              class="secondary-button"
+              [disabled]="isSubmitting"
+              (click)="toggleCreateForm()"
+            >
+              Vazgeç
+            </button>
+
+            <button
+              type="submit"
+              class="primary-button"
+              [disabled]="isSubmitting"
+            >
+              {{
+                isSubmitting
+                  ? 'Oluşturuluyor...'
+                  : 'Şirketi oluştur'
+              }}
+            </button>
+
+          </div>
+
+        </form>
+
+      </section>
+
+    }
+
+
+    <section class="companies-card">
+
+      <div class="section-title">
+
+        <div>
+          <p class="page-eyebrow">
+            Şirketler
+          </p>
+
+          <h2>
+            Platformdaki şirketler
+          </h2>
+
+          <p>
+            Şirketlerin yalnızca genel kullanıcı
+            sayılarını ve erişim durumunu
+            görüntüleyebilirsiniz.
+          </p>
+        </div>
+
+        <span class="company-total">
+          {{ companies.length }} şirket
+        </span>
+
+      </div>
+
+
+      <div class="company-list">
+
+        @for (
+          company of companies;
+          track company.id
+        ) {
+
+          <article
+            class="company-item"
+            [class.suspended]="
+              !company.is_active
+            "
+          >
+
+            <div class="company-main">
+
+              <div class="company-logo">
+                {{
+                  company.name
+                    .charAt(0)
+                    .toLocaleUpperCase('tr-TR')
+                }}
+              </div>
+
+              <div>
+                <div class="company-name-row">
+
+                  <strong>
+                    {{ company.name }}
+                  </strong>
+
+                  <span
+                    class="status-badge"
+                    [class.inactive]="
+                      !company.is_active
+                    "
+                  >
+                    {{
+                      company.is_active
+                        ? 'Aktif'
+                        : 'Askıda'
+                    }}
+                  </span>
+
+                </div>
+
+                <p>
+                  {{ company.code }}
+                  · Oluşturulma:
+                  {{ formatDate(company.created_at) }}
+                </p>
+
+                @if (
+                  !company.is_active &&
+                  company.suspension_reason
+                ) {
+                  <p class="suspension-reason">
+                    Askıya alma nedeni:
+                    {{ company.suspension_reason }}
+                  </p>
+                }
+              </div>
+
+            </div>
+
+
+            <div class="company-stats">
+
+              <div>
+                <span>Kullanıcı</span>
+                <strong>
+                  {{ company.user_count }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Yönetici</span>
+                <strong>
+                  {{ company.manager_count }}
+                </strong>
+              </div>
+
+              <div>
+                <span>Personel</span>
+                <strong>
+                  {{ company.employee_count }}
+                </strong>
+              </div>
+
+            </div>
+
+
+            <div class="company-actions">
+
+              @if (company.is_active) {
+
+                <button
+                  type="button"
+                  class="danger-button"
+                  [disabled]="isSubmitting"
+                  (click)="requestSuspend(company)"
+                >
+                  Erişimi askıya al
+                </button>
+
+              } @else {
+
+                <button
+                  type="button"
+                  class="activate-button"
+                  [disabled]="isSubmitting"
+                  (click)="activateCompany(company)"
+                >
+                  Erişimi aç
+                </button>
+
+              }
+
+            </div>
+
+          </article>
+
+        } @empty {
+
+          <div class="empty-state">
+            Henüz şirket oluşturulmamış.
+          </div>
+
+        }
+
+      </div>
+
+    </section>
+
+  }
+
+
+  @if (selectedCompanyForSuspension) {
+
+    <div class="modal-backdrop">
+
+      <section class="modal-card">
+
+        <p class="page-eyebrow">
+          Erişim Kontrolü
+        </p>
+
+        <h2>
+          Şirket erişimini askıya al
+        </h2>
+
+        <p>
+          <strong>
+            {{ selectedCompanyForSuspension.name }}
+          </strong>
+          şirketindeki kullanıcılar,
+          işlem tamamlandıktan sonra sisteme
+          giriş yapamayacaktır.
+        </p>
+
+        <label>
+          <span>Askıya alma nedeni *</span>
+
+          <textarea
+            [(ngModel)]="suspensionReason"
+            [ngModelOptions]="{
+              standalone: true
+            }"
+            placeholder="Askıya alma nedenini yazın"
+          ></textarea>
+        </label>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="isSubmitting"
+            (click)="cancelSuspend()"
+          >
+            Vazgeç
+          </button>
+
+          <button
+            type="button"
+            class="danger-button"
+            [disabled]="isSubmitting"
+            (click)="confirmSuspend()"
+          >
+            {{
+              isSubmitting
+                ? 'İşleniyor...'
+                : 'Erişimi askıya al'
+            }}
+          </button>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  }
+
+</section>

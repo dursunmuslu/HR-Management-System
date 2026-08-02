@@ -2,5 +2,6 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    PERSONEL = "PERSONEL"
+    PLATFORM_OWNER = "PLATFORM_OWNER"
     YONETICI = "YONETICI"
+    PERSONEL = "PERSONEL"

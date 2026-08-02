@@ -1,27 +1,39 @@
-from fastapi import APIRouter, Depends
+from fastapi import (
+    APIRouter,
+    Depends,
+)
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.dashboard_schema import (
-    DashboardSummaryResponse
+    DashboardSummaryResponse,
 )
-from app.security.auth_dependency import require_manager
-from app.services.dashboard_service import DashboardService
+from app.security.auth_dependency import (
+    require_manager,
+)
+from app.services.dashboard_service import (
+    DashboardService,
+)
 
 
 router = APIRouter(
     prefix="/dashboard",
-    tags=["Dashboard"]
+    tags=["Dashboard"],
 )
 
 
 @router.get(
     "/summary",
-    response_model=DashboardSummaryResponse
+    response_model=DashboardSummaryResponse,
 )
 def get_dashboard_summary(
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager)
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
-    return DashboardService.get_summary(db)
+    return DashboardService.get_summary(
+        db=db,
+        current_user=current_user,
+    )

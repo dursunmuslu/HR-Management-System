@@ -1,16 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+
 import {
   Component,
   OnInit,
   inject
 } from '@angular/core';
+
 import {
   FormBuilder,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { finalize } from 'rxjs';
+
+import {
+  finalize,
+  forkJoin
+} from 'rxjs';
 
 import {
   Company,
@@ -22,15 +28,20 @@ import {
   OrganizationService
 } from '../../../core/services/organization.service';
 
+
 @Component({
   selector: 'app-organization-management',
+
   standalone: true,
+
   imports: [
     CommonModule,
     ReactiveFormsModule
   ],
+
   templateUrl:
     './organization-management.component.html',
+
   styleUrl:
     './organization-management.component.scss'
 })
@@ -42,15 +53,14 @@ export class OrganizationManagementComponent
   private readonly organizationService =
     inject(OrganizationService);
 
-  companies: Company[] = [];
+  company: Company | null = null;
+
   departments: Department[] = [];
   teams: Team[] = [];
 
-  selectedCompanyId: number | null = null;
   selectedDepartmentId: number | null = null;
 
-  isLoadingCompanies = true;
-  isLoadingDepartments = false;
+  isLoading = true;
   isLoadingTeams = false;
   isSubmitting = false;
 
@@ -67,7 +77,9 @@ export class OrganizationManagementComponent
           Validators.maxLength(150)
         ]
       ],
+
       tax_number: [''],
+
       address: ['']
     });
 
@@ -81,6 +93,7 @@ export class OrganizationManagementComponent
           Validators.maxLength(100)
         ]
       ],
+
       description: ['']
     });
 
@@ -94,54 +107,65 @@ export class OrganizationManagementComponent
           Validators.maxLength(100)
         ]
       ],
+
       description: ['']
     });
 
   ngOnInit(): void {
-    this.loadCompanies();
+    this.loadOrganization();
   }
 
-  loadCompanies(): void {
-    this.isLoadingCompanies = true;
+  get selectedDepartment(): Department | null {
+    if (!this.selectedDepartmentId) {
+      return null;
+    }
+
+    return (
+      this.departments.find(
+        department =>
+          department.id ===
+          this.selectedDepartmentId
+      ) ?? null
+    );
+  }
+
+  loadOrganization(): void {
+    this.isLoading = true;
     this.errorMessage = '';
 
-    this.organizationService.getCompanies()
+    forkJoin({
+      company:
+        this.organizationService.getMyCompany(),
+
+      departments:
+        this.organizationService.getDepartments()
+    })
       .pipe(
         finalize(() => {
-          this.isLoadingCompanies = false;
+          this.isLoading = false;
         })
       )
       .subscribe({
-        next: companies => {
-          this.companies = companies;
+        next: result => {
+          this.company = result.company;
 
-          if (
-            this.selectedCompanyId &&
-            !companies.some(
-              company =>
-                company.id === this.selectedCompanyId
-            )
-          ) {
-            this.selectedCompanyId = null;
-            this.selectedDepartmentId = null;
-            this.departments = [];
-            this.teams = [];
-          }
+          this.departments =
+            this.sortByName(result.departments);
+
+          this.companyForm.patchValue({
+            name: result.company.name,
+            tax_number:
+              result.company.tax_number ?? '',
+            address:
+              result.company.address ?? ''
+          });
         },
+
         error: error => {
           this.errorMessage =
             this.resolveError(error);
         }
       });
-  }
-
-  selectCompany(company: Company): void {
-    this.selectedCompanyId = company.id;
-    this.selectedDepartmentId = null;
-    this.departments = [];
-    this.teams = [];
-
-    this.loadDepartments(company.id);
   }
 
   selectDepartment(
@@ -152,10 +176,12 @@ export class OrganizationManagementComponent
 
     this.teams = [];
 
-    this.loadTeams(department.id);
+    this.loadTeams(
+      department.id
+    );
   }
 
-  createCompany(): void {
+  updateCompany(): void {
     if (this.companyForm.invalid) {
       this.companyForm.markAllAsTouched();
       return;
@@ -164,17 +190,18 @@ export class OrganizationManagementComponent
     const value =
       this.companyForm.getRawValue();
 
-    this.isSubmitting = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.startSubmitting();
 
-    this.organizationService.createCompany({
-      name: value.name.trim(),
-      tax_number:
-        value.tax_number.trim() || null,
-      address:
-        value.address.trim() || null
-    })
+    this.organizationService
+      .updateMyCompany({
+        name: value.name.trim(),
+
+        tax_number:
+          value.tax_number.trim() || null,
+
+        address:
+          value.address.trim() || null
+      })
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
@@ -182,20 +209,22 @@ export class OrganizationManagementComponent
       )
       .subscribe({
         next: company => {
-          this.companies = [
-            ...this.companies,
-            company
-          ].sort((a, b) =>
-            a.name.localeCompare(
-              b.name,
-              'tr'
-            )
-          );
+          this.company = company;
 
-          this.companyForm.reset();
+          this.companyForm.patchValue({
+            name: company.name,
+
+            tax_number:
+              company.tax_number ?? '',
+
+            address:
+              company.address ?? ''
+          });
+
           this.successMessage =
-            'Şirket başarıyla oluşturuldu.';
+            'Şirket bilgileri güncellendi.';
         },
+
         error: error => {
           this.errorMessage =
             this.resolveError(error);
@@ -204,12 +233,6 @@ export class OrganizationManagementComponent
   }
 
   createDepartment(): void {
-    if (!this.selectedCompanyId) {
-      this.errorMessage =
-        'Önce bir şirket seçmelisiniz.';
-      return;
-    }
-
     if (this.departmentForm.invalid) {
       this.departmentForm.markAllAsTouched();
       return;
@@ -218,15 +241,12 @@ export class OrganizationManagementComponent
     const value =
       this.departmentForm.getRawValue();
 
-    this.isSubmitting = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.startSubmitting();
 
     this.organizationService
       .createDepartment({
-        company_id:
-          this.selectedCompanyId,
         name: value.name.trim(),
+
         description:
           value.description.trim() || null
       })
@@ -237,20 +257,18 @@ export class OrganizationManagementComponent
       )
       .subscribe({
         next: department => {
-          this.departments = [
-            ...this.departments,
-            department
-          ].sort((a, b) =>
-            a.name.localeCompare(
-              b.name,
-              'tr'
-            )
-          );
+          this.departments =
+            this.sortByName([
+              ...this.departments,
+              department
+            ]);
 
           this.departmentForm.reset();
+
           this.successMessage =
             'Departman başarıyla oluşturuldu.';
         },
+
         error: error => {
           this.errorMessage =
             this.resolveError(error);
@@ -258,113 +276,71 @@ export class OrganizationManagementComponent
       });
   }
 
-  createTeam(): void {
-    if (!this.selectedDepartmentId) {
-      this.errorMessage =
-        'Önce bir departman seçmelisiniz.';
-      return;
-    }
-
-    if (this.teamForm.invalid) {
-      this.teamForm.markAllAsTouched();
-      return;
-    }
-
-    const value =
-      this.teamForm.getRawValue();
-
-    this.isSubmitting = true;
-    this.errorMessage = '';
-    this.successMessage = '';
-
-    this.organizationService.createTeam({
-      department_id:
-        this.selectedDepartmentId,
-      name: value.name.trim(),
-      description:
-        value.description.trim() || null
-    })
-      .pipe(
-        finalize(() => {
-          this.isSubmitting = false;
-        })
-      )
-      .subscribe({
-        next: team => {
-          this.teams = [
-            ...this.teams,
-            team
-          ].sort((a, b) =>
-            a.name.localeCompare(
-              b.name,
-              'tr'
-            )
-          );
-
-          this.teamForm.reset();
-          this.successMessage =
-            'Takım başarıyla oluşturuldu.';
-        },
-        error: error => {
-          this.errorMessage =
-            this.resolveError(error);
-        }
-      });
-  }
-
-  deleteCompany(
-    company: Company
+  toggleDepartment(
+    department: Department
   ): void {
-    const confirmed = window.confirm(
-      `${company.name} şirketini silmek istediğinizden emin misiniz?`
-    );
+    this.clearMessages();
 
-    if (!confirmed) {
-      return;
-    }
+    const request$ =
+      department.is_active
+        ? this.organizationService
+            .deactivateDepartment(
+              department.id
+            )
 
-    this.organizationService
-      .deleteCompany(company.id)
-      .subscribe({
-        next: () => {
-          this.companies =
-            this.companies.filter(
-              item => item.id !== company.id
+        : this.organizationService
+            .activateDepartment(
+              department.id
             );
 
-          if (
-            this.selectedCompanyId ===
-            company.id
-          ) {
-            this.selectedCompanyId = null;
-            this.selectedDepartmentId = null;
-            this.departments = [];
-            this.teams = [];
-          }
+    request$.subscribe({
+      next: updatedDepartment => {
+        this.replaceDepartment(
+          updatedDepartment
+        );
 
-          this.successMessage =
-            'Şirket silindi.';
-        },
-        error: error => {
-          this.errorMessage =
-            this.resolveError(error);
+        if (
+          !updatedDepartment.is_active &&
+          this.selectedDepartmentId ===
+          updatedDepartment.id
+        ) {
+          this.teams =
+            this.teams.map(team => ({
+              ...team,
+              is_active: false
+            }));
         }
-      });
+
+        this.successMessage =
+          updatedDepartment.is_active
+            ? 'Departman aktifleştirildi.'
+            : 'Departman pasife alındı.';
+      },
+
+      error: error => {
+        this.errorMessage =
+          this.resolveError(error);
+      }
+    });
   }
 
   deleteDepartment(
     department: Department
   ): void {
     const confirmed = window.confirm(
-      `${department.name} departmanını silmek istediğinizden emin misiniz?`
+      `${department.name} departmanını kalıcı olarak silmek istediğinizden emin misiniz?`
     );
 
     if (!confirmed) {
       return;
     }
 
+    this.clearMessages();
+
     this.organizationService
-      .deleteDepartment(department.id)
+      .deleteDepartment(
+        department.id
+      )
       .subscribe({
         next: () => {
           this.departments =
@@ -384,6 +360,7 @@ export class OrganizationManagementComponent
           this.successMessage =
             'Departman silindi.';
         },
+
         error: error => {
           this.errorMessage =
             this.resolveError(error);
@@ -391,14 +368,100 @@ export class OrganizationManagementComponent
       });
   }
 
+  createTeam(): void {
+    if (!this.selectedDepartmentId) {
+      this.errorMessage =
+        'Önce bir departman seçmelisiniz.';
+
+      return;
+    }
+
+    if (this.teamForm.invalid) {
+      this.teamForm.markAllAsTouched();
+      return;
+    }
+
+    const value =
+      this.teamForm.getRawValue();
+
+    this.startSubmitting();
+
+    this.organizationService
+      .createTeam({
+        department_id:
+          this.selectedDepartmentId,
+
+        name: value.name.trim(),
+
+        description:
+          value.description.trim() || null
+      })
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: team => {
+          this.teams =
+            this.sortByName([
+              ...this.teams,
+              team
+            ]);
+
+          this.teamForm.reset();
+
+          this.successMessage =
+            'Takım başarıyla oluşturuldu.';
+        },
+
+        error: error => {
+          this.errorMessage =
+            this.resolveError(error);
+        }
+      });
+  }
+
+  toggleTeam(team: Team): void {
+    this.clearMessages();
+
+    const request$ =
+      team.is_active
+        ? this.organizationService
+            .deactivateTeam(team.id)
+
+        : this.organizationService
+            .activateTeam(team.id);
+
+    request$.subscribe({
+      next: updatedTeam => {
+        this.replaceTeam(
+          updatedTeam
+        );
+
+        this.successMessage =
+          updatedTeam.is_active
+            ? 'Takım aktifleştirildi.'
+            : 'Takım pasife alındı.';
+      },
+
+      error: error => {
+        this.errorMessage =
+          this.resolveError(error);
+      }
+    });
+  }
+
   deleteTeam(team: Team): void {
     const confirmed = window.confirm(
-      `${team.name} takımını silmek istediğinizden emin misiniz?`
+      `${team.name} takımını kalıcı olarak silmek istediğinizden emin misiniz?`
     );
 
     if (!confirmed) {
       return;
     }
+
+    this.clearMessages();
 
     this.organizationService
       .deleteTeam(team.id)
@@ -412,29 +475,7 @@ export class OrganizationManagementComponent
           this.successMessage =
             'Takım silindi.';
         },
-        error: error => {
-          this.errorMessage =
-            this.resolveError(error);
-        }
-      });
-  }
 
-  private loadDepartments(
-    companyId: number
-  ): void {
-    this.isLoadingDepartments = true;
-
-    this.organizationService
-      .getDepartmentsByCompany(companyId)
-      .pipe(
-        finalize(() => {
-          this.isLoadingDepartments = false;
-        })
-      )
-      .subscribe({
-        next: departments => {
-          this.departments = departments;
-        },
         error: error => {
           this.errorMessage =
             this.resolveError(error);
@@ -446,9 +487,12 @@ export class OrganizationManagementComponent
     departmentId: number
   ): void {
     this.isLoadingTeams = true;
+    this.errorMessage = '';
 
     this.organizationService
-      .getTeamsByDepartment(departmentId)
+      .getTeamsByDepartment(
+        departmentId
+      )
       .pipe(
         finalize(() => {
           this.isLoadingTeams = false;
@@ -456,13 +500,67 @@ export class OrganizationManagementComponent
       )
       .subscribe({
         next: teams => {
-          this.teams = teams;
+          this.teams =
+            this.sortByName(teams);
         },
+
         error: error => {
           this.errorMessage =
             this.resolveError(error);
         }
       });
+  }
+
+  private replaceDepartment(
+    updatedDepartment: Department
+  ): void {
+    this.departments =
+      this.departments.map(
+        department =>
+          department.id ===
+          updatedDepartment.id
+
+            ? updatedDepartment
+            : department
+      );
+  }
+
+  private replaceTeam(
+    updatedTeam: Team
+  ): void {
+    this.teams =
+      this.teams.map(
+        team =>
+          team.id === updatedTeam.id
+            ? updatedTeam
+            : team
+      );
+  }
+
+  private sortByName<
+    T extends {
+      name: string;
+    }
+  >(
+    values: T[]
+  ): T[] {
+    return [...values].sort(
+      (first, second) =>
+        first.name.localeCompare(
+          second.name,
+          'tr'
+        )
+    );
+  }
+
+  private startSubmitting(): void {
+    this.isSubmitting = true;
+    this.clearMessages();
+  }
+
+  private clearMessages(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
   }
 
   private resolveError(
@@ -480,6 +578,26 @@ export class OrganizationManagementComponent
       'string'
     ) {
       return error.error.detail;
+    }
+
+    if (error.status === 401) {
+      return (
+        'Oturum süreniz dolmuş olabilir. ' +
+        'Tekrar giriş yapın.'
+      );
+    }
+
+    if (error.status === 403) {
+      return (
+        'Bu işlem için yetkiniz bulunmuyor.'
+      );
+    }
+
+    if (error.status === 409) {
+      return (
+        'Bu işlem mevcut kayıtlarla ' +
+        'çakıştığı için tamamlanamadı.'
+      );
     }
 
     return (

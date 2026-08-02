@@ -6,8 +6,6 @@ from pydantic import (
 
 
 class DepartmentCreate(BaseModel):
-    company_id: int = Field(gt=0)
-
     name: str = Field(
         min_length=2,
         max_length=100,
@@ -31,12 +29,11 @@ class DepartmentUpdate(BaseModel):
         max_length=500,
     )
 
-    is_active: bool | None = None
-
 
 class DepartmentResponse(BaseModel):
     id: int
     company_id: int
+
     name: str
     description: str | None
     is_active: bool

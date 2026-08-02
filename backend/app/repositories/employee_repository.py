@@ -4,18 +4,41 @@ from sqlalchemy.orm import (
 )
 
 from app.models.employee import Employee
+from app.models.team import Team
+from app.models.user import User
 
 
 class EmployeeRepository:
 
     @staticmethod
-    def find_all(
+    def _query_with_relations(
         db: Session,
-    ) -> list[Employee]:
+    ):
         return (
             db.query(Employee)
             .options(
                 joinedload(Employee.user)
+                .joinedload(User.company),
+
+                joinedload(Employee.team)
+                .joinedload(Team.department),
+            )
+        )
+
+    @staticmethod
+    def find_all_by_company(
+        db: Session,
+        company_id: int,
+    ) -> list[Employee]:
+        return (
+            EmployeeRepository
+            ._query_with_relations(db)
+            .join(
+                User,
+                Employee.user_id == User.id,
+            )
+            .filter(
+                User.company_id == company_id
             )
             .order_by(
                 Employee.first_name.asc(),
@@ -25,15 +48,33 @@ class EmployeeRepository:
         )
 
     @staticmethod
+    def find_by_id_and_company(
+        db: Session,
+        employee_id: int,
+        company_id: int,
+    ) -> Employee | None:
+        return (
+            EmployeeRepository
+            ._query_with_relations(db)
+            .join(
+                User,
+                Employee.user_id == User.id,
+            )
+            .filter(
+                Employee.id == employee_id,
+                User.company_id == company_id,
+            )
+            .first()
+        )
+
+    @staticmethod
     def find_by_id(
         db: Session,
         employee_id: int,
     ) -> Employee | None:
         return (
-            db.query(Employee)
-            .options(
-                joinedload(Employee.user)
-            )
+            EmployeeRepository
+            ._query_with_relations(db)
             .filter(
                 Employee.id == employee_id
             )
@@ -46,10 +87,8 @@ class EmployeeRepository:
         user_id: int,
     ) -> Employee | None:
         return (
-            db.query(Employee)
-            .options(
-                joinedload(Employee.user)
-            )
+            EmployeeRepository
+            ._query_with_relations(db)
             .filter(
                 Employee.user_id == user_id
             )
@@ -97,29 +136,14 @@ class EmployeeRepository:
         )
 
     @staticmethod
-    def create(
+    def add(
         db: Session,
         employee: Employee,
     ) -> Employee:
-        try:
-            db.add(employee)
-            db.commit()
-            db.refresh(employee)
+        db.add(employee)
+        db.flush()
 
-            return (
-                db.query(Employee)
-                .options(
-                    joinedload(Employee.user)
-                )
-                .filter(
-                    Employee.id == employee.id
-                )
-                .first()
-            )
-
-        except Exception:
-            db.rollback()
-            raise
+        return employee
 
     @staticmethod
     def save(
@@ -131,16 +155,7 @@ class EmployeeRepository:
             db.commit()
             db.refresh(employee)
 
-            return (
-                db.query(Employee)
-                .options(
-                    joinedload(Employee.user)
-                )
-                .filter(
-                    Employee.id == employee.id
-                )
-                .first()
-            )
+            return employee
 
         except Exception:
             db.rollback()

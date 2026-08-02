@@ -1,32 +1,141 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import (
+    Session,
+    joinedload,
+)
 
+from app.models.department import Department
 from app.models.team import Team
 
 
 class TeamRepository:
 
     @staticmethod
-    def find_all(
+    def _query_with_relations(
         db: Session,
-    ) -> list[Team]:
+    ):
         return (
             db.query(Team)
-            .order_by(Team.name.asc())
+            .options(
+                joinedload(Team.department)
+                .joinedload(Department.company),
+
+                joinedload(Team.employees),
+            )
+        )
+
+    @staticmethod
+    def find_all_by_company(
+        db: Session,
+        company_id: int,
+    ) -> list[Team]:
+        return (
+            TeamRepository
+            ._query_with_relations(db)
+            .join(
+                Department,
+                Team.department_id == Department.id,
+            )
+            .filter(
+                Department.company_id == company_id
+            )
+            .order_by(
+                Department.name.asc(),
+                Team.name.asc(),
+            )
             .all()
         )
 
     @staticmethod
-    def find_by_department_id(
+    def find_active_by_company(
         db: Session,
-        department_id: int,
+        company_id: int,
     ) -> list[Team]:
         return (
-            db.query(Team)
-            .filter(
-                Team.department_id == department_id
+            TeamRepository
+            ._query_with_relations(db)
+            .join(
+                Department,
+                Team.department_id == Department.id,
             )
-            .order_by(Team.name.asc())
+            .filter(
+                Department.company_id == company_id,
+                Department.is_active.is_(True),
+                Team.is_active.is_(True),
+            )
+            .order_by(
+                Department.name.asc(),
+                Team.name.asc(),
+            )
             .all()
+        )
+
+    @staticmethod
+    def find_by_department_and_company(
+        db: Session,
+        department_id: int,
+        company_id: int,
+    ) -> list[Team]:
+        return (
+            TeamRepository
+            ._query_with_relations(db)
+            .join(
+                Department,
+                Team.department_id == Department.id,
+            )
+            .filter(
+                Team.department_id == department_id,
+                Department.company_id == company_id,
+            )
+            .order_by(
+                Team.name.asc()
+            )
+            .all()
+        )
+
+    @staticmethod
+    def find_active_by_department_and_company(
+        db: Session,
+        department_id: int,
+        company_id: int,
+    ) -> list[Team]:
+        return (
+            TeamRepository
+            ._query_with_relations(db)
+            .join(
+                Department,
+                Team.department_id == Department.id,
+            )
+            .filter(
+                Team.department_id == department_id,
+                Department.company_id == company_id,
+                Department.is_active.is_(True),
+                Team.is_active.is_(True),
+            )
+            .order_by(
+                Team.name.asc()
+            )
+            .all()
+        )
+
+    @staticmethod
+    def find_by_id_and_company(
+        db: Session,
+        team_id: int,
+        company_id: int,
+    ) -> Team | None:
+        return (
+            TeamRepository
+            ._query_with_relations(db)
+            .join(
+                Department,
+                Team.department_id == Department.id,
+            )
+            .filter(
+                Team.id == team_id,
+                Department.company_id == company_id,
+            )
+            .first()
         )
 
     @staticmethod
@@ -35,8 +144,11 @@ class TeamRepository:
         team_id: int,
     ) -> Team | None:
         return (
-            db.query(Team)
-            .filter(Team.id == team_id)
+            TeamRepository
+            ._query_with_relations(db)
+            .filter(
+                Team.id == team_id
+            )
             .first()
         )
 
@@ -46,11 +158,19 @@ class TeamRepository:
         department_id: int,
         name: str,
     ) -> Team | None:
+        normalized_name = (
+            name
+            .strip()
+            .lower()
+        )
+
         return (
-            db.query(Team)
+            TeamRepository
+            ._query_with_relations(db)
             .filter(
                 Team.department_id == department_id,
-                Team.name == name,
+                func.lower(Team.name)
+                == normalized_name,
             )
             .first()
         )
@@ -64,7 +184,11 @@ class TeamRepository:
             db.add(team)
             db.commit()
             db.refresh(team)
-            return team
+
+            return TeamRepository.find_by_id(
+                db=db,
+                team_id=team.id,
+            )
 
         except Exception:
             db.rollback()

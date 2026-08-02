@@ -1,13 +1,26 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
+
+import {
+  HttpErrorResponse
+} from '@angular/common/http';
+
 import {
   Component,
   OnInit,
   inject
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+
+import {
+  FormsModule
+} from '@angular/forms';
+
+import {
+  RouterLink
+} from '@angular/router';
+
+import {
+  finalize
+} from 'rxjs';
 
 import {
   Employee,
@@ -18,28 +31,44 @@ import {
   EmployeeService
 } from '../../../core/services/employee.service';
 
+
+type AssignableEmployeeRole =
+  | 'PERSONEL'
+  | 'YONETICI';
+
+
 @Component({
   selector: 'app-employee-list',
+
   standalone: true,
+
   imports: [
     CommonModule,
     FormsModule,
     RouterLink
   ],
-  templateUrl: './employee-list.component.html',
-  styleUrl: './employee-list.component.scss'
+
+  templateUrl:
+    './employee-list.component.html',
+
+  styleUrl:
+    './employee-list.component.scss'
 })
-export class EmployeeListComponent implements OnInit {
+export class EmployeeListComponent
+  implements OnInit {
+
   private readonly employeeService =
     inject(EmployeeService);
+
 
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
 
   searchText = '';
+
   selectedRole:
     | 'TUMU'
-    | EmployeeRole = 'TUMU';
+    | AssignableEmployeeRole = 'TUMU';
 
   isLoading = true;
 
@@ -52,13 +81,16 @@ export class EmployeeListComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
 
+
   ngOnInit(): void {
     this.loadEmployees();
   }
 
+
   get totalCount(): number {
     return this.employees.length;
   }
+
 
   get managerCount(): number {
     return this.employees.filter(
@@ -68,6 +100,7 @@ export class EmployeeListComponent implements OnInit {
     ).length;
   }
 
+
   get personnelCount(): number {
     return this.employees.filter(
       employee =>
@@ -76,6 +109,7 @@ export class EmployeeListComponent implements OnInit {
     ).length;
   }
 
+
   get activeCount(): number {
     return this.employees.filter(
       employee =>
@@ -83,8 +117,10 @@ export class EmployeeListComponent implements OnInit {
     ).length;
   }
 
+
   loadEmployees(): void {
     this.isLoading = true;
+
     this.errorMessage = '';
     this.successMessage = '';
 
@@ -112,58 +148,79 @@ export class EmployeeListComponent implements OnInit {
           this.filteredEmployees = [];
 
           this.errorMessage =
-            this.resolveErrorMessage(error);
+            this.resolveErrorMessage(
+              error
+            );
         }
       });
   }
 
+
   applyFilters(): void {
-    const search = this.searchText
-      .trim()
-      .toLocaleLowerCase('tr-TR');
+    const search =
+      this.searchText
+        .trim()
+        .toLocaleLowerCase(
+          'tr-TR'
+        );
 
     this.filteredEmployees =
-      this.employees.filter(employee => {
-        const employeeRole =
-          this.getEmployeeRole(employee);
+      this.employees.filter(
+        employee => {
+          const employeeRole =
+            this.getEmployeeRole(
+              employee
+            );
 
-        const roleMatches =
-          this.selectedRole === 'TUMU' ||
-          employeeRole === this.selectedRole;
+          const roleMatches =
+            this.selectedRole ===
+              'TUMU' ||
+            employeeRole ===
+              this.selectedRole;
 
-        const searchableText = [
-          this.getFullName(employee),
-          employee.username ?? '',
-          employee.email ?? '',
-          employee.department ?? '',
-          employee.position ?? '',
-          employee.employee_number ?? '',
-          employee.tc_no ?? '',
-          this.getRoleLabel(employeeRole)
-        ]
-          .filter(
-            value =>
-              value.trim().length > 0
-          )
-          .join(' ')
-          .toLocaleLowerCase('tr-TR');
+          const searchableText = [
+            this.getFullName(employee),
+            employee.username ?? '',
+            employee.email ?? '',
+            employee.department ?? '',
+            employee.position ?? '',
+            employee.employee_number ?? '',
+            employee.tc_no ?? '',
+            this.getRoleLabel(
+              employeeRole
+            )
+          ]
+            .filter(
+              value =>
+                value.trim().length > 0
+            )
+            .join(' ')
+            .toLocaleLowerCase(
+              'tr-TR'
+            );
 
-        const searchMatches =
-          search.length === 0 ||
-          searchableText.includes(search);
+          const searchMatches =
+            search.length === 0 ||
+            searchableText.includes(
+              search
+            );
 
-        return (
-          roleMatches &&
-          searchMatches
-        );
-      });
+          return (
+            roleMatches &&
+            searchMatches
+          );
+        }
+      );
   }
+
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedRole = 'TUMU';
+
     this.applyFilters();
   }
+
 
   changeRole(
     employee: Employee,
@@ -173,20 +230,44 @@ export class EmployeeListComponent implements OnInit {
       event.target as HTMLSelectElement;
 
     const previousRole =
-      this.getEmployeeRole(employee);
+      this.getEmployeeRole(
+        employee
+      );
 
-    const newRole =
-      selectElement.value as EmployeeRole;
+    const selectedValue =
+      selectElement.value;
+
+    if (
+      !this.isAssignableRole(
+        selectedValue
+      )
+    ) {
+      selectElement.value =
+        previousRole;
+
+      this.errorMessage =
+        'Geçersiz kullanıcı rolü seçildi.';
+
+      return;
+    }
+
+    const newRole:
+      AssignableEmployeeRole =
+        selectedValue;
 
     if (newRole === previousRole) {
       return;
     }
 
     const employeeName =
-      this.getFullName(employee);
+      this.getFullName(
+        employee
+      );
 
     const newRoleLabel =
-      this.getRoleLabel(newRole);
+      this.getRoleLabel(
+        newRole
+      );
 
     const confirmed =
       window.confirm(
@@ -225,14 +306,35 @@ export class EmployeeListComponent implements OnInit {
           employee.username =
             updatedUser.username;
 
+          employee.is_active =
+            updatedUser.is_active;
+
+          employee.must_change_password =
+            updatedUser
+              .must_change_password;
+
           if (employee.user) {
             employee.user = {
               ...employee.user,
-              id: updatedUser.id,
+
+              id:
+                updatedUser.id,
+
+              company_id:
+                updatedUser.company_id,
+
               username:
                 updatedUser.username,
+
               role:
-                updatedUser.role
+                updatedUser.role,
+
+              is_active:
+                updatedUser.is_active,
+
+              must_change_password:
+                updatedUser
+                  .must_change_password
             };
           }
 
@@ -249,16 +351,21 @@ export class EmployeeListComponent implements OnInit {
             previousRole;
 
           this.errorMessage =
-            this.resolveErrorMessage(error);
+            this.resolveErrorMessage(
+              error
+            );
         }
       });
   }
+
 
   deleteEmployee(
     employee: Employee
   ): void {
     const employeeName =
-      this.getFullName(employee);
+      this.getFullName(
+        employee
+      );
 
     const confirmed =
       window.confirm(
@@ -276,7 +383,9 @@ export class EmployeeListComponent implements OnInit {
       employee.id;
 
     this.employeeService
-      .deleteEmployee(employee.id)
+      .deleteEmployee(
+        employee.id
+      )
       .pipe(
         finalize(() => {
           this.deletingEmployeeId =
@@ -288,7 +397,8 @@ export class EmployeeListComponent implements OnInit {
           this.employees =
             this.employees.filter(
               item =>
-                item.id !== employee.id
+                item.id !==
+                employee.id
             );
 
           this.applyFilters();
@@ -301,14 +411,17 @@ export class EmployeeListComponent implements OnInit {
           error: HttpErrorResponse
         ) => {
           this.errorMessage =
-            this.resolveErrorMessage(error);
+            this.resolveErrorMessage(
+              error
+            );
         }
       });
   }
 
+
   getEmployeeRole(
     employee: Employee
-  ): EmployeeRole {
+  ): AssignableEmployeeRole {
     const role =
       employee.role ??
       employee.user?.role;
@@ -318,6 +431,7 @@ export class EmployeeListComponent implements OnInit {
       : 'PERSONEL';
   }
 
+
   getFullName(
     employee: Employee
   ): string {
@@ -326,7 +440,9 @@ export class EmployeeListComponent implements OnInit {
         'string' &&
       employee.full_name.trim()
     ) {
-      return employee.full_name.trim();
+      return (
+        employee.full_name.trim()
+      );
     }
 
     const fullName = [
@@ -348,10 +464,13 @@ export class EmployeeListComponent implements OnInit {
     );
   }
 
+
   getInitials(
     employee: Employee
   ): string {
-    return this.getFullName(employee)
+    return this.getFullName(
+      employee
+    )
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
@@ -360,11 +479,15 @@ export class EmployeeListComponent implements OnInit {
           part.charAt(0)
       )
       .join('')
-      .toLocaleUpperCase('tr-TR');
+      .toLocaleUpperCase(
+        'tr-TR'
+      );
   }
+
 
   getRoleLabel(
     role:
+      | EmployeeRole
       | string
       | null
       | undefined
@@ -377,58 +500,110 @@ export class EmployeeListComponent implements OnInit {
       return 'Personel';
     }
 
+    if (
+      role === 'PLATFORM_OWNER'
+    ) {
+      return 'Sistem Sahibi';
+    }
+
     return 'Belirtilmemiş';
   }
+
 
   getLeaveBalance(
     employee: Employee
   ): number {
     return (
-      employee.remaining_annual_leave ??
+      employee
+        .remaining_annual_leave ??
       0
     );
   }
+
+
+  private isAssignableRole(
+    value: string
+  ): value is AssignableEmployeeRole {
+    return (
+      value === 'PERSONEL' ||
+      value === 'YONETICI'
+    );
+  }
+
 
   private resolveErrorMessage(
     error: HttpErrorResponse
   ): string {
     if (error.status === 0) {
-      return 'Sunucuya bağlanılamadı. Backend servisinin çalıştığını kontrol edin.';
+      return (
+        'Sunucuya bağlanılamadı. ' +
+        'Backend servisinin çalıştığını ' +
+        'kontrol edin.'
+      );
     }
 
     if (error.status === 400) {
-      return typeof error.error?.detail ===
-        'string'
-        ? error.error.detail
-        : 'Bu işlem gerçekleştirilemedi.';
+      return (
+        typeof error.error?.detail ===
+          'string'
+          ? error.error.detail
+          : 'Bu işlem gerçekleştirilemedi.'
+      );
     }
 
     if (error.status === 401) {
-      return 'Oturum süreniz dolmuş olabilir. Tekrar giriş yapın.';
+      return (
+        'Oturum süreniz dolmuş olabilir. ' +
+        'Tekrar giriş yapın.'
+      );
     }
 
     if (error.status === 403) {
-      return 'Bu işlem için yönetici yetkisi gereklidir.';
+      return (
+        typeof error.error?.detail ===
+          'string'
+          ? error.error.detail
+          : 'Bu işlem için yönetici yetkisi gereklidir.'
+      );
     }
 
     if (error.status === 404) {
-      return typeof error.error?.detail ===
-        'string'
-        ? error.error.detail
-        : 'Kullanıcı veya personel kaydı bulunamadı.';
+      return (
+        typeof error.error?.detail ===
+          'string'
+          ? error.error.detail
+          : 'Kullanıcı veya personel kaydı bulunamadı.'
+      );
+    }
+
+    if (error.status === 409) {
+      return (
+        typeof error.error?.detail ===
+          'string'
+          ? error.error.detail
+          : 'İşlem mevcut kayıtlarla çakıştı.'
+      );
     }
 
     if (error.status === 422) {
-      return 'Gönderilen rol veya personel bilgileri geçersiz.';
+      return (
+        typeof error.error?.detail ===
+          'string'
+          ? error.error.detail
+          : 'Gönderilen rol veya personel bilgileri geçersiz.'
+      );
     }
 
     if (
       typeof error.error?.detail ===
-      'string'
+        'string'
     ) {
       return error.error.detail;
     }
 
-    return 'Personel işlemi sırasında beklenmeyen bir hata oluştu.';
+    return (
+      'Personel işlemi sırasında ' +
+      'beklenmeyen bir hata oluştu.'
+    );
   }
 }

@@ -6,7 +6,9 @@ from pydantic import (
 
 
 class TeamCreate(BaseModel):
-    department_id: int = Field(gt=0)
+    department_id: int = Field(
+        gt=0,
+    )
 
     name: str = Field(
         min_length=2,
@@ -31,12 +33,11 @@ class TeamUpdate(BaseModel):
         max_length=500,
     )
 
-    is_active: bool | None = None
-
 
 class TeamResponse(BaseModel):
     id: int
     department_id: int
+
     name: str
     description: str | None
     is_active: bool

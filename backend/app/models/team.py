@@ -58,3 +58,8 @@ class Team(Base):
         "Department",
         back_populates="teams",
     )
+
+    employees = relationship(
+        "Employee",
+        back_populates="team",
+    )

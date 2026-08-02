@@ -1,17 +1,23 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import {
+  Injectable,
+  inject
+} from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
 import {
   Company,
-  CreateCompanyRequest,
   CreateDepartmentRequest,
   CreateTeamRequest,
   Department,
-  Team
+  Team,
+  UpdateCompanyRequest,
+  UpdateDepartmentRequest,
+  UpdateTeamRequest
 } from '../models/organization.model';
+
 
 @Injectable({
   providedIn: 'root'
@@ -23,34 +29,24 @@ export class OrganizationService {
   private readonly apiUrl =
     environment.apiUrl.replace(/\/+$/, '');
 
-  getCompanies(): Observable<Company[]> {
-    return this.http.get<Company[]>(
-      `${this.apiUrl}/companies`
+  getMyCompany(): Observable<Company> {
+    return this.http.get<Company>(
+      `${this.apiUrl}/companies/me`
     );
   }
 
-  createCompany(
-    request: CreateCompanyRequest
+  updateMyCompany(
+    request: UpdateCompanyRequest
   ): Observable<Company> {
-    return this.http.post<Company>(
-      `${this.apiUrl}/companies`,
+    return this.http.put<Company>(
+      `${this.apiUrl}/companies/me`,
       request
     );
   }
 
-  deleteCompany(
-    companyId: number
-  ): Observable<void> {
-    return this.http.delete<void>(
-      `${this.apiUrl}/companies/${companyId}`
-    );
-  }
-
-  getDepartmentsByCompany(
-    companyId: number
-  ): Observable<Department[]> {
+  getDepartments(): Observable<Department[]> {
     return this.http.get<Department[]>(
-      `${this.apiUrl}/departments/company/${companyId}`
+      `${this.apiUrl}/departments`
     );
   }
 
@@ -63,11 +59,45 @@ export class OrganizationService {
     );
   }
 
+  updateDepartment(
+    departmentId: number,
+    request: UpdateDepartmentRequest
+  ): Observable<Department> {
+    return this.http.put<Department>(
+      `${this.apiUrl}/departments/${departmentId}`,
+      request
+    );
+  }
+
+  activateDepartment(
+    departmentId: number
+  ): Observable<Department> {
+    return this.http.patch<Department>(
+      `${this.apiUrl}/departments/${departmentId}/activate`,
+      {}
+    );
+  }
+
+  deactivateDepartment(
+    departmentId: number
+  ): Observable<Department> {
+    return this.http.patch<Department>(
+      `${this.apiUrl}/departments/${departmentId}/deactivate`,
+      {}
+    );
+  }
+
   deleteDepartment(
     departmentId: number
   ): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/departments/${departmentId}`
+    );
+  }
+
+  getTeams(): Observable<Team[]> {
+    return this.http.get<Team[]>(
+      `${this.apiUrl}/teams`
     );
   }
 
@@ -85,6 +115,34 @@ export class OrganizationService {
     return this.http.post<Team>(
       `${this.apiUrl}/teams`,
       request
+    );
+  }
+
+  updateTeam(
+    teamId: number,
+    request: UpdateTeamRequest
+  ): Observable<Team> {
+    return this.http.put<Team>(
+      `${this.apiUrl}/teams/${teamId}`,
+      request
+    );
+  }
+
+  activateTeam(
+    teamId: number
+  ): Observable<Team> {
+    return this.http.patch<Team>(
+      `${this.apiUrl}/teams/${teamId}/activate`,
+      {}
+    );
+  }
+
+  deactivateTeam(
+    teamId: number
+  ): Observable<Team> {
+    return this.http.patch<Team>(
+      `${this.apiUrl}/teams/${teamId}/deactivate`,
+      {}
     );
   }
 

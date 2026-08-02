@@ -1,27 +1,44 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/guards/auth.guard';
-import { managerGuard } from './core/guards/manager.guard';
+import {
+  authGuard
+} from './core/guards/auth.guard';
+
+import {
+  companyUserGuard
+} from './core/guards/company-user.guard';
+
+import {
+  defaultRouteGuard
+} from './core/guards/default-route.guard';
+
+import {
+  managerGuard
+} from './core/guards/manager.guard';
+
+import {
+  platformOwnerGuard
+} from './core/guards/platform-owner.guard';
 
 import {
   MainLayoutComponent
 } from './layout/main-layout/main-layout.component';
 
 import {
-  OrganizationManagementComponent
-} from './pages/organization/organization-management/organization-management.component';
-
-import {
-  LoginComponent
-} from './pages/login/login.component';
+  ChangePasswordComponent
+} from './pages/change-password/change-password.component';
 
 import {
   DashboardComponent
 } from './pages/dashboard/dashboard.component';
 
 import {
-  MyLeavesComponent
-} from './pages/leaves/my-leaves/my-leaves.component';
+  EmployeeFormComponent
+} from './pages/employees/employee-form/employee-form.component';
+
+import {
+  EmployeeListComponent
+} from './pages/employees/employee-list/employee-list.component';
 
 import {
   CreateLeaveComponent
@@ -32,75 +49,138 @@ import {
 } from './pages/leaves/leave-requests/leave-requests.component';
 
 import {
-  EmployeeListComponent
-} from './pages/employees/employee-list/employee-list.component';
+  MyLeavesComponent
+} from './pages/leaves/my-leaves/my-leaves.component';
 
 import {
-  EmployeeFormComponent
-} from './pages/employees/employee-form/employee-form.component';
+  LoginComponent
+} from './pages/login/login.component';
+
+import {
+  OrganizationManagementComponent
+} from './pages/organization/organization-management/organization-management.component';
+
+import {
+  PlatformDashboardComponent
+} from './pages/platform/platform-dashboard/platform-dashboard.component';
+
 
 export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent
   },
+
   {
-  path: 'organization',
-  component: OrganizationManagementComponent,
-  canActivate: [managerGuard]
+    path: 'change-password',
+    component: ChangePasswordComponent,
+    canActivate: [
+      authGuard
+    ]
   },
+
   {
     path: '',
     component: MainLayoutComponent,
+
     canActivate: [
       authGuard
     ],
 
-
-
     children: [
       {
-        path: 'dashboard',
-        component: DashboardComponent
+        path: 'platform',
+        component: PlatformDashboardComponent,
+
+        canActivate: [
+          platformOwnerGuard
+        ]
       },
+
+      {
+        path: 'dashboard',
+        component: DashboardComponent,
+
+        canActivate: [
+          companyUserGuard
+        ]
+      },
+
       {
         path: 'leaves/my',
-        component: MyLeavesComponent
+        component: MyLeavesComponent,
+
+        canActivate: [
+          companyUserGuard
+        ]
       },
+
       {
         path: 'leaves/create',
-        component: CreateLeaveComponent
+        component: CreateLeaveComponent,
+
+        canActivate: [
+          companyUserGuard
+        ]
       },
+
       {
         path: 'leave-requests',
         component: LeaveRequestsComponent,
+
         canActivate: [
           managerGuard
         ]
       },
+
+      {
+        path: 'organization',
+        component:
+          OrganizationManagementComponent,
+
+        canActivate: [
+          managerGuard
+        ]
+      },
+
       {
         path: 'employees',
         component: EmployeeListComponent,
+
         canActivate: [
           managerGuard
         ]
       },
+
       {
         path: 'employees/create',
         component: EmployeeFormComponent,
+
         canActivate: [
           managerGuard
         ]
       },
+
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard'
+
+        component: DashboardComponent,
+
+        canActivate: [
+          defaultRouteGuard
+        ]
       }
     ]
   },
+
   {
     path: '**',
-    redirectTo: 'dashboard'
+
+    component: DashboardComponent,
+
+    canActivate: [
+      defaultRouteGuard
+    ]
   }
 ];

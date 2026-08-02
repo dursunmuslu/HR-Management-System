@@ -1,12 +1,16 @@
-from fastapi import HTTPException, status
+from fastapi import (
+    HTTPException,
+    status,
+)
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.company import Company
+from app.models.user import User
 from app.repositories.company_repository import (
     CompanyRepository,
 )
 from app.schemas.company_schema import (
-    CompanyCreate,
     CompanyUpdate,
 )
 
@@ -14,19 +18,18 @@ from app.schemas.company_schema import (
 class CompanyService:
 
     @staticmethod
-    def get_all(
+    def get_my_company(
         db: Session,
-    ) -> list[Company]:
-        return CompanyRepository.find_all(db)
-
-    @staticmethod
-    def get_by_id(
-        db: Session,
-        company_id: int,
+        current_user: User,
     ) -> Company:
+        company_id = (
+            CompanyService
+            ._require_company_id(current_user)
+        )
+
         company = CompanyRepository.find_by_id(
-            db,
-            company_id,
+            db=db,
+            company_id=company_id,
         )
 
         if company is None:
@@ -38,72 +41,46 @@ class CompanyService:
         return company
 
     @staticmethod
-    def create(
+    def update_my_company(
         db: Session,
-        request: CompanyCreate,
-    ) -> Company:
-        normalized_name = request.name.strip()
-
-        existing_company = (
-            CompanyRepository.find_by_name(
-                db,
-                normalized_name,
-            )
-        )
-
-        if existing_company is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A company with this name already exists.",
-            )
-
-        company = Company(
-            name=normalized_name,
-            tax_number=(
-                request.tax_number.strip()
-                if request.tax_number
-                else None
-            ),
-            address=(
-                request.address.strip()
-                if request.address
-                else None
-            ),
-        )
-
-        return CompanyRepository.save(
-            db,
-            company,
-        )
-
-    @staticmethod
-    def update(
-        db: Session,
-        company_id: int,
         request: CompanyUpdate,
+        current_user: User,
     ) -> Company:
-        company = CompanyService.get_by_id(
-            db,
-            company_id,
+        company = CompanyService.get_my_company(
+            db=db,
+            current_user=current_user,
         )
 
         update_data = request.model_dump(
             exclude_unset=True,
         )
 
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "At least one field must be "
+                    "provided for update."
+                ),
+            )
+
         if "name" in update_data:
-            normalized_name = update_data["name"].strip()
+            normalized_name = (
+                update_data["name"]
+                .strip()
+            )
 
             existing_company = (
                 CompanyRepository.find_by_name(
-                    db,
-                    normalized_name,
+                    db=db,
+                    name=normalized_name,
                 )
             )
 
             if (
                 existing_company is not None
-                and existing_company.id != company.id
+                and existing_company.id
+                != company.id
             ):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -113,43 +90,121 @@ class CompanyService:
                     ),
                 )
 
-            update_data["name"] = normalized_name
+            update_data["name"] = (
+                normalized_name
+            )
 
-        for field_name in [
-            "tax_number",
-            "address",
-        ]:
-            if (
-                field_name in update_data
-                and update_data[field_name] is not None
-            ):
-                update_data[field_name] = (
-                    update_data[field_name].strip()
+        if "tax_number" in update_data:
+            tax_number_value = (
+                update_data["tax_number"]
+            )
+
+            normalized_tax_number = (
+                tax_number_value.strip()
+                if tax_number_value
+                else None
+            )
+
+            if normalized_tax_number:
+                existing_company = (
+                    CompanyRepository
+                    .find_by_tax_number(
+                        db=db,
+                        tax_number=(
+                            normalized_tax_number
+                        ),
+                    )
                 )
 
-        for field_name, field_value in update_data.items():
+                if (
+                    existing_company is not None
+                    and existing_company.id
+                    != company.id
+                ):
+                    raise HTTPException(
+                        status_code=(
+                            status.HTTP_409_CONFLICT
+                        ),
+                        detail=(
+                            "A company with this tax "
+                            "number already exists."
+                        ),
+                    )
+
+            update_data["tax_number"] = (
+                normalized_tax_number
+            )
+
+        if "address" in update_data:
+            address_value = (
+                update_data["address"]
+            )
+
+            normalized_address = (
+                address_value.strip()
+                if address_value
+                else None
+            )
+
+            update_data["address"] = (
+                normalized_address
+            )
+
+        for field_name, field_value in (
+            update_data.items()
+        ):
             setattr(
                 company,
                 field_name,
                 field_value,
             )
 
-        return CompanyRepository.save(
-            db,
-            company,
-        )
+        try:
+            return CompanyRepository.save(
+                db=db,
+                company=company,
+            )
+
+        except IntegrityError as exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Company name or tax number "
+                    "already exists."
+                ),
+            ) from exception
+
+        except HTTPException:
+            db.rollback()
+            raise
+
+        except Exception as exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=(
+                    status
+                    .HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                detail=(
+                    "Company information could not "
+                    "be updated."
+                ),
+            ) from exception
 
     @staticmethod
-    def delete(
-        db: Session,
-        company_id: int,
-    ) -> None:
-        company = CompanyService.get_by_id(
-            db,
-            company_id,
-        )
+    def _require_company_id(
+        current_user: User,
+    ) -> int:
+        if current_user.company_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "User account is not associated "
+                    "with a company."
+                ),
+            )
 
-        CompanyRepository.delete(
-            db,
-            company,
-        )
+        return current_user.company_id

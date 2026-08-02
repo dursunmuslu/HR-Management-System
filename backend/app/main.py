@@ -1,9 +1,10 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import (
+    CORSMiddleware,
+)
 
-from app.database.database import Base, engine
-
-# SQLAlchemy tablo oluşturma sırasında bütün modelleri görsün.
+# Modeller SQLAlchemy relationship registry içinde
+# eksiksiz yüklensin diye import ediliyor.
 from app.models.company import Company
 from app.models.department import Department
 from app.models.employee import Employee
@@ -29,40 +30,44 @@ from app.routers.employee_router import (
 from app.routers.leave_router import (
     router as leave_router,
 )
+from app.routers.platform_router import (
+    router as platform_router,
+)
 from app.routers.team_router import (
     router as team_router,
 )
 
 
-# Import edilen modeller için eksik tabloları oluşturur.
-Base.metadata.create_all(bind=engine)
-
-
 app = FastAPI(
     title="HR Management API",
-    description="Human Resources Leave Management System",
-    version="1.0.0",
+    description=(
+        "Multi-tenant Human Resources "
+        "Management Platform"
+    ),
+    version="2.0.0",
 )
 
 
 allowed_origins = [
-    # Yerel Angular
+    # Lokal Angular geliştirme adresleri
     "http://localhost:4200",
     "http://127.0.0.1:4200",
 
-    # Vercel production domain
+    # Vercel production adresi
     "https://hr-management-system-lilac.vercel.app",
 ]
 
 
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=allowed_origins,
 
-    # Vercel'in her deploy sırasında ürettiği preview adresleri
+    # Vercel preview deployment adresleri
     allow_origin_regex=(
         r"^https://hr-management-system-"
-        r"[a-zA-Z0-9-]+-dursuns-projects-630978bb"
+        r"[a-zA-Z0-9-]+-"
+        r"dursuns-projects-630978bb"
         r"\.vercel\.app$"
     ),
 
@@ -76,12 +81,15 @@ app.add_middleware(
 # Authentication
 app.include_router(auth_router)
 
-# Organization structure
+# Platform owner işlemleri
+app.include_router(platform_router)
+
+# Şirket ve organizasyon işlemleri
 app.include_router(company_router)
 app.include_router(department_router)
 app.include_router(team_router)
 
-# Human resources
+# İnsan kaynakları işlemleri
 app.include_router(employee_router)
 app.include_router(leave_router)
 app.include_router(dashboard_router)
@@ -93,7 +101,10 @@ app.include_router(dashboard_router)
 )
 def home():
     return {
-        "message": "HR Management API is running."
+        "message": (
+            "HR Management API is running."
+        ),
+        "version": "2.0.0",
     }
 
 
@@ -103,5 +114,6 @@ def home():
 )
 def health_check():
     return {
-        "status": "healthy"
+        "status": "healthy",
+        "version": "2.0.0",
     }

@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.employee_schema import (
-    EmployeeCreate,
     EmployeeCreateWithUser,
     EmployeeProfileResponse,
     EmployeeResponse,
@@ -17,10 +16,12 @@ from app.schemas.employee_schema import (
     LeaveBalanceResponse,
 )
 from app.security.auth_dependency import (
-    get_current_user,
+    require_company_user,
     require_manager,
 )
-from app.services.employee_service import EmployeeService
+from app.services.employee_service import (
+    EmployeeService,
+)
 
 
 router = APIRouter(
@@ -36,12 +37,12 @@ router = APIRouter(
 def get_my_leave_balance(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        get_current_user
+        require_company_user
     ),
 ):
     return EmployeeService.get_my_leave_balance(
-        db,
-        current_user,
+        db=db,
+        current_user=current_user,
     )
 
 
@@ -52,12 +53,12 @@ def get_my_leave_balance(
 def get_my_employee_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        get_current_user
+        require_company_user
     ),
 ):
     return EmployeeService.get_my_profile(
-        db,
-        current_user,
+        db=db,
+        current_user=current_user,
     )
 
 
@@ -69,27 +70,14 @@ def get_my_employee_profile(
 def create_employee_with_user(
     request: EmployeeCreateWithUser,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return EmployeeService.create_with_user(
-        db,
-        request,
-    )
-
-
-@router.post(
-    "",
-    response_model=EmployeeResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_employee(
-    request: EmployeeCreate,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
-):
-    return EmployeeService.create(
-        db,
-        request,
+        db=db,
+        request=request,
+        current_user=current_user,
     )
 
 
@@ -99,9 +87,14 @@ def create_employee(
 )
 def get_all_employees(
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
-    return EmployeeService.get_all(db)
+    return EmployeeService.get_all(
+        db=db,
+        current_user=current_user,
+    )
 
 
 @router.get(
@@ -111,11 +104,14 @@ def get_all_employees(
 def get_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return EmployeeService.get_by_id(
-        db,
-        employee_id,
+        db=db,
+        employee_id=employee_id,
+        current_user=current_user,
     )
 
 
@@ -127,12 +123,15 @@ def update_employee(
     employee_id: int,
     request: EmployeeUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     return EmployeeService.update(
-        db,
-        employee_id,
-        request,
+        db=db,
+        employee_id=employee_id,
+        request=request,
+        current_user=current_user,
     )
 
 
@@ -143,11 +142,14 @@ def update_employee(
 def delete_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_manager),
+    current_user: User = Depends(
+        require_manager
+    ),
 ):
     EmployeeService.delete(
-        db,
-        employee_id,
+        db=db,
+        employee_id=employee_id,
+        current_user=current_user,
     )
 
     return Response(
