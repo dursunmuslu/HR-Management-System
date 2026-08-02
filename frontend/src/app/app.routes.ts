@@ -8,6 +8,10 @@ import {
 } from './layout/main-layout/main-layout.component';
 
 import {
+  OrganizationManagementComponent
+} from './pages/organization/organization-management/organization-management.component';
+
+import {
   LoginComponent
 } from './pages/login/login.component';
 
@@ -41,11 +45,19 @@ export const routes: Routes = [
     component: LoginComponent
   },
   {
+  path: 'organization',
+  component: OrganizationManagementComponent,
+  canActivate: [managerGuard]
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [
       authGuard
     ],
+
+
+
     children: [
       {
         path: 'dashboard',

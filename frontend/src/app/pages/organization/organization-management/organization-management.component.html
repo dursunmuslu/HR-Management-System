@@ -1,0 +1,287 @@
+<section class="organization-page">
+
+  <header class="page-header">
+    <div>
+      <p class="page-eyebrow">
+        Organizasyon Yönetimi
+      </p>
+
+      <h1>Şirket Yapısı</h1>
+
+      <p>
+        Şirket, departman ve takım yapısını
+        merkezi olarak yönetin.
+      </p>
+    </div>
+  </header>
+
+  @if (successMessage) {
+    <div class="alert success">
+      {{ successMessage }}
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="alert error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  <div class="organization-grid">
+
+    <section class="organization-column">
+      <div class="column-header">
+        <div>
+          <span>1</span>
+          <h2>Şirketler</h2>
+        </div>
+
+        <strong>
+          {{ companies.length }}
+        </strong>
+      </div>
+
+      <form
+        [formGroup]="companyForm"
+        (ngSubmit)="createCompany()"
+      >
+        <input
+          type="text"
+          formControlName="name"
+          placeholder="Şirket adı"
+        >
+
+        <input
+          type="text"
+          formControlName="tax_number"
+          placeholder="Vergi numarası"
+        >
+
+        <textarea
+          formControlName="address"
+          placeholder="Adres"
+        ></textarea>
+
+        <button
+          type="submit"
+          [disabled]="isSubmitting"
+        >
+          Şirket ekle
+        </button>
+      </form>
+
+      @if (isLoadingCompanies) {
+        <p class="state-text">
+          Şirketler yükleniyor...
+        </p>
+      } @else {
+        <div class="item-list">
+          @for (
+            company of companies;
+            track company.id
+          ) {
+            <article
+              class="organization-item"
+              [class.selected]="
+                selectedCompanyId === company.id
+              "
+              (click)="selectCompany(company)"
+            >
+              <div>
+                <strong>
+                  {{ company.name }}
+                </strong>
+
+                <small>
+                  {{
+                    company.tax_number ||
+                    'Vergi numarası yok'
+                  }}
+                </small>
+              </div>
+
+              <button
+                type="button"
+                (click)="
+                  $event.stopPropagation();
+                  deleteCompany(company)
+                "
+              >
+                Sil
+              </button>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="organization-column">
+      <div class="column-header">
+        <div>
+          <span>2</span>
+          <h2>Departmanlar</h2>
+        </div>
+
+        <strong>
+          {{ departments.length }}
+        </strong>
+      </div>
+
+      @if (!selectedCompanyId) {
+        <p class="state-text">
+          Departmanları görmek için
+          bir şirket seçin.
+        </p>
+      } @else {
+        <form
+          [formGroup]="departmentForm"
+          (ngSubmit)="createDepartment()"
+        >
+          <input
+            type="text"
+            formControlName="name"
+            placeholder="Departman adı"
+          >
+
+          <textarea
+            formControlName="description"
+            placeholder="Açıklama"
+          ></textarea>
+
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
+          >
+            Departman ekle
+          </button>
+        </form>
+
+        @if (isLoadingDepartments) {
+          <p class="state-text">
+            Departmanlar yükleniyor...
+          </p>
+        } @else {
+          <div class="item-list">
+            @for (
+              department of departments;
+              track department.id
+            ) {
+              <article
+                class="organization-item"
+                [class.selected]="
+                  selectedDepartmentId ===
+                  department.id
+                "
+                (click)="
+                  selectDepartment(department)
+                "
+              >
+                <div>
+                  <strong>
+                    {{ department.name }}
+                  </strong>
+
+                  <small>
+                    {{
+                      department.description ||
+                      'Açıklama yok'
+                    }}
+                  </small>
+                </div>
+
+                <button
+                  type="button"
+                  (click)="
+                    $event.stopPropagation();
+                    deleteDepartment(department)
+                  "
+                >
+                  Sil
+                </button>
+              </article>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="organization-column">
+      <div class="column-header">
+        <div>
+          <span>3</span>
+          <h2>Takımlar</h2>
+        </div>
+
+        <strong>
+          {{ teams.length }}
+        </strong>
+      </div>
+
+      @if (!selectedDepartmentId) {
+        <p class="state-text">
+          Takımları görmek için
+          bir departman seçin.
+        </p>
+      } @else {
+        <form
+          [formGroup]="teamForm"
+          (ngSubmit)="createTeam()"
+        >
+          <input
+            type="text"
+            formControlName="name"
+            placeholder="Takım adı"
+          >
+
+          <textarea
+            formControlName="description"
+            placeholder="Açıklama"
+          ></textarea>
+
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
+          >
+            Takım ekle
+          </button>
+        </form>
+
+        @if (isLoadingTeams) {
+          <p class="state-text">
+            Takımlar yükleniyor...
+          </p>
+        } @else {
+          <div class="item-list">
+            @for (
+              team of teams;
+              track team.id
+            ) {
+              <article class="organization-item">
+                <div>
+                  <strong>
+                    {{ team.name }}
+                  </strong>
+
+                  <small>
+                    {{
+                      team.description ||
+                      'Açıklama yok'
+                    }}
+                  </small>
+                </div>
+
+                <button
+                  type="button"
+                  (click)="deleteTeam(team)"
+                >
+                  Sil
+                </button>
+              </article>
+            }
+          </div>
+        }
+      }
+    </section>
+
+  </div>
+</section>
