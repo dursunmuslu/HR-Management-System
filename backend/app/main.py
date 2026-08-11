@@ -49,18 +49,21 @@ app = FastAPI(
 
 
 allowed_origins = [
-    # Lokal Angular geliştirme adresleri
+    # Angular local development
     "http://localhost:4200",
     "http://127.0.0.1:4200",
 
-    # Vercel production adresi
+    # Capacitor Android
+    "http://localhost",
+    "https://localhost",
+
+    # Vercel production
     "https://hr-management-system-lilac.vercel.app",
 ]
 
 
 app.add_middleware(
     CORSMiddleware,
-
     allow_origins=allowed_origins,
 
     # Vercel preview deployment adresleri
