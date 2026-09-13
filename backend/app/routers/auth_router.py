@@ -1,5 +1,3 @@
-import traceback
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -43,20 +41,10 @@ def login(
     request: UserLogin,
     db: Session = Depends(get_db),
 ):
-    try:
-        return AuthService.login(
-            db=db,
-            request=request,
-        )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        error_trace = traceback.format_exc()
-        print(f"DEBUG LOGIN ERROR:\n{error_trace}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"DEBUG_ERROR: {str(exc)} | TRACE: {error_trace}",
-        )
+    return AuthService.login(
+        db=db,
+        request=request,
+    )
 
 
 @router.get(
@@ -214,17 +202,6 @@ def _get_manageable_user(
     user_id: int,
     current_user: User,
 ) -> User:
-    """
-    Yönetilecek kullanıcıyı güvenli biçimde getirir.
-
-    Kurallar:
-    - Platform sahibi şirket kullanıcılarını yönetebilir.
-    - Şirket yöneticisi yalnızca kendi şirketindeki
-      kullanıcıları yönetebilir.
-    - Platform sahibi hesabı bu endpoint'lerden
-      yönetilemez.
-    """
-
     target_user = UserRepository.find_by_id(
         db,
         user_id,
@@ -257,8 +234,6 @@ def _get_manageable_user(
             or target_user.company_id !=
             current_user.company_id
         ):
-            # Başka şirkette kullanıcı bulunduğunu
-            # açıklamamak için 404 döndürülür.
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User could not be found.",
