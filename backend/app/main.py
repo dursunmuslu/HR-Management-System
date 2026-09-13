@@ -1,7 +1,5 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import (
-    CORSMiddleware,
-)
+from fastapi.middleware.cors import CORSMiddleware
 
 # Modeller SQLAlchemy relationship registry içinde
 # eksiksiz yüklensin diye import ediliyor.
@@ -12,38 +10,19 @@ from app.models.leave_request import LeaveRequest
 from app.models.team import Team
 from app.models.user import User
 
-from app.routers.auth_router import (
-    router as auth_router,
-)
-from app.routers.company_router import (
-    router as company_router,
-)
-from app.routers.dashboard_router import (
-    router as dashboard_router,
-)
-from app.routers.department_router import (
-    router as department_router,
-)
-from app.routers.employee_router import (
-    router as employee_router,
-)
-from app.routers.leave_router import (
-    router as leave_router,
-)
-from app.routers.platform_router import (
-    router as platform_router,
-)
-from app.routers.team_router import (
-    router as team_router,
-)
+from app.routers.auth_router import router as auth_router
+from app.routers.company_router import router as company_router
+from app.routers.dashboard_router import router as dashboard_router
+from app.routers.department_router import router as department_router
+from app.routers.employee_router import router as employee_router
+from app.routers.leave_router import router as leave_router
+from app.routers.platform_router import router as platform_router
+from app.routers.team_router import router as team_router
 
 
 app = FastAPI(
     title="HR Management API",
-    description=(
-        "Multi-tenant Human Resources "
-        "Management Platform"
-    ),
+    description="Multi-tenant Human Resources Management Platform",
     version="2.0.0",
 )
 
@@ -59,6 +38,7 @@ allowed_origins = [
 
     # Vercel production
     "https://hr-management-system-lilac.vercel.app",
+    "https://hr-management-system-fef2b1zsa-dursuns-projects-630978bb.vercel.app",
 ]
 
 
@@ -104,9 +84,7 @@ app.include_router(dashboard_router)
 )
 def home():
     return {
-        "message": (
-            "HR Management API is running."
-        ),
+        "message": "HR Management API is running.",
         "version": "2.0.0",
     }
 
