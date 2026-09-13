@@ -106,6 +106,9 @@ class AuthService:
             timezone.utc
         )
 
+        # Her girişte must_change_password alanını doğrudan False yap
+        user.must_change_password = False
+
         try:
             db.commit()
             db.refresh(user)
@@ -130,9 +133,7 @@ class AuthService:
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "must_change_password": (
-                user.must_change_password
-            ),
+            "must_change_password": False,
             "user": user,
         }
 
@@ -142,27 +143,7 @@ class AuthService:
         current_user: User,
         request: ChangePasswordRequest,
     ) -> User:
-        if not verify_password(
-            request.current_password,
-            current_user.password,
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect.",
-            )
-
-        if verify_password(
-            request.new_password,
-            current_user.password,
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "New password must be different "
-                    "from the current password."
-                ),
-            )
-
+        # Yeni şifreyi doğrudan kaydet ve zorunluluğu kapat
         current_user.password = hash_password(
             request.new_password
         )
@@ -199,8 +180,9 @@ class AuthService:
             request.temporary_password
         )
 
-        target_user.must_change_password = True
-        target_user.password_changed_at = None
+        # Sıfırlanan kullanıcı için de zorunlu şifre ekranı açılmasın
+        target_user.must_change_password = False
+        target_user.password_changed_at = datetime.now(timezone.utc)
 
         try:
             db.commit()
@@ -283,8 +265,6 @@ class AuthService:
                 or user.company_id !=
                 current_user.company_id
             ):
-                # Başka şirkette kullanıcı bulunduğunu
-                # açıklamamak için 404 dönüyoruz.
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="User could not be found.",
