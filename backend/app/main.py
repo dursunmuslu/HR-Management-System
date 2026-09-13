@@ -1,6 +1,10 @@
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+
+from app.database.database import Base, engine, SessionLocal
 
 # Modeller SQLAlchemy relationship registry içinde
 # eksiksiz yüklensin diye import ediliyor.
@@ -10,6 +14,9 @@ from app.models.employee import Employee
 from app.models.leave_request import LeaveRequest
 from app.models.team import Team
 from app.models.user import User
+
+from app.security.password import hash_password
+from app.security.user_role import UserRole
 
 from app.routers.auth_router import router as auth_router
 from app.routers.company_router import router as company_router
@@ -21,10 +28,44 @@ from app.routers.platform_router import router as platform_router
 from app.routers.team_router import router as team_router
 
 
+def init_db():
+    # 1. Tüm tabloları PostgreSQL üzerinde oluştur
+    Base.metadata.create_all(bind=engine)
+
+    # 2. Platform Owner kullanıcısını oluştur
+    db: Session = SessionLocal()
+    try:
+        existing_user = db.query(User).filter(User.username == "dursun").first()
+        if not existing_user:
+            platform_owner = User(
+                username="dursun",
+                password=hash_password("123456"),
+                role=UserRole.PLATFORM_OWNER.value,
+                is_active=True,
+                must_change_password=False,
+                company_id=None,
+            )
+            db.add(platform_owner)
+            db.commit()
+            print("INFO: Platform owner 'dursun' successfully created.")
+    except Exception as exc:
+        db.rollback()
+        print(f"ERROR creating platform owner: {exc}")
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
     title="HR Management API",
     description="Multi-tenant Human Resources Management Platform",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -99,4 +140,3 @@ def health_check():
         "status": "healthy",
         "version": "2.0.0",
     }
-
