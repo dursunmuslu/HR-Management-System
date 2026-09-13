@@ -29,15 +29,22 @@ from app.routers.team_router import router as team_router
 
 
 def init_db():
-    # 1. Tüm tabloları PostgreSQL üzerinde oluştur
+    # 1. Tabloları PostgreSQL üzerinde oluştur
     Base.metadata.create_all(bind=engine)
 
-    # 2. Platform Owner kullanıcısını oluştur
+    # 2. Platform Owner kullanıcısını garantile / şifresini 123456 olarak sıfırla
     db: Session = SessionLocal()
     try:
-        existing_user = db.query(User).filter(User.username == "dursun").first()
-        if not existing_user:
-            platform_owner = User(
+        user = db.query(User).filter(User.username == "dursun").first()
+        if user:
+            user.password = hash_password("123456")
+            user.role = UserRole.PLATFORM_OWNER.value
+            user.is_active = True
+            user.must_change_password = False
+            user.company_id = None
+            print("INFO: Platform owner 'dursun' password successfully synced to 123456.")
+        else:
+            user = User(
                 username="dursun",
                 password=hash_password("123456"),
                 role=UserRole.PLATFORM_OWNER.value,
@@ -45,12 +52,12 @@ def init_db():
                 must_change_password=False,
                 company_id=None,
             )
-            db.add(platform_owner)
-            db.commit()
-            print("INFO: Platform owner 'dursun' successfully created.")
+            db.add(user)
+            print("INFO: Platform owner 'dursun' created with password 123456.")
+        db.commit()
     except Exception as exc:
         db.rollback()
-        print(f"ERROR creating platform owner: {exc}")
+        print(f"ERROR initializing database: {exc}")
     finally:
         db.close()
 
