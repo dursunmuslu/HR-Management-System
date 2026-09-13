@@ -72,15 +72,6 @@
           </span>
         </a>
 
-        <!--
-          Bir sonraki aşamada:
-
-          /platform/companies
-          /platform/companies/create
-
-          sayfaları buraya eklenecek.
-        -->
-
       } @else {
 
         <p class="navigation-title">
@@ -101,6 +92,40 @@
 
           <span>
             Dashboard
+          </span>
+        </a>
+
+
+        <!-- OPERASYON & ÇALIŞMA (QUIZ VE VARDİYA) -->
+        <p class="navigation-title">
+          Operasyon & Çalışma
+        </p>
+
+        <a
+          routerLink="/quizzes"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">
+            📝
+          </span>
+
+          <span>
+            Değerlendirme Quizleri
+          </span>
+        </a>
+
+        <a
+          routerLink="/shifts"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">
+            ⏰
+          </span>
+
+          <span>
+            Vardiya & Molalar
           </span>
         </a>
 
