@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,6 +28,10 @@ app = FastAPI(
 )
 
 
+# ============================================================
+# CORS CONFIGURATION
+# ============================================================
+
 allowed_origins = [
     # Angular local development
     "http://localhost:4200",
@@ -38,7 +43,6 @@ allowed_origins = [
 
     # Vercel production
     "https://hr-management-system-lilac.vercel.app",
-    "https://hr-management-system-fef2b1zsa-dursuns-projects-630978bb.vercel.app",
 ]
 
 
@@ -46,13 +50,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
 
-    # Vercel preview deployment adresleri
-    allow_origin_regex=(
-        r"^https://hr-management-system-"
-        r"[a-zA-Z0-9-]+-"
-        r"dursuns-projects-630978bb"
-        r"\.vercel\.app$"
-    ),
+    # Vercel preview / deployment adresleri
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
 
     allow_credentials=True,
     allow_methods=["*"],
@@ -61,27 +60,32 @@ app.add_middleware(
 )
 
 
+# ============================================================
+# ROUTERS
+# ============================================================
+
 # Authentication
 app.include_router(auth_router)
 
 # Platform owner işlemleri
 app.include_router(platform_router)
 
-# Şirket ve organizasyon işlemleri
+# Company & organization
 app.include_router(company_router)
 app.include_router(department_router)
 app.include_router(team_router)
 
-# İnsan kaynakları işlemleri
+# Human Resources
 app.include_router(employee_router)
 app.include_router(leave_router)
 app.include_router(dashboard_router)
 
 
-@app.get(
-    "/",
-    tags=["System"],
-)
+# ============================================================
+# SYSTEM ENDPOINTS
+# ============================================================
+
+@app.get("/", tags=["System"])
 def home():
     return {
         "message": "HR Management API is running.",
@@ -89,12 +93,10 @@ def home():
     }
 
 
-@app.get(
-    "/health",
-    tags=["System"],
-)
+@app.get("/health", tags=["System"])
 def health_check():
     return {
         "status": "healthy",
         "version": "2.0.0",
     }
+
