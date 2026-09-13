@@ -32,19 +32,20 @@ def init_db():
     # 1. Tabloları PostgreSQL üzerinde oluştur
     Base.metadata.create_all(bind=engine)
 
-    # 2. Platform Owner kullanıcısını garantile / şifresini 123456 olarak sıfırla
+    # 2. Kullanıcıları garantile ve şifrelerini senkronize et
     db: Session = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == "dursun").first()
-        if user:
-            user.password = hash_password("123456")
-            user.role = UserRole.PLATFORM_OWNER.value
-            user.is_active = True
-            user.must_change_password = False
-            user.company_id = None
+        # Platform Owner (dursun)
+        owner = db.query(User).filter(User.username == "dursun").first()
+        if owner:
+            owner.password = hash_password("123456")
+            owner.role = UserRole.PLATFORM_OWNER.value
+            owner.is_active = True
+            owner.must_change_password = False
+            owner.company_id = None
             print("INFO: Platform owner 'dursun' password successfully synced to 123456.")
         else:
-            user = User(
+            owner = User(
                 username="dursun",
                 password=hash_password("123456"),
                 role=UserRole.PLATFORM_OWNER.value,
@@ -52,8 +53,34 @@ def init_db():
                 must_change_password=False,
                 company_id=None,
             )
-            db.add(user)
+            db.add(owner)
             print("INFO: Platform owner 'dursun' created with password 123456.")
+
+        # Şirket Yöneticisi (dmuslu)
+        manager = db.query(User).filter(User.username == "dmuslu").first()
+        if manager:
+            manager.password = hash_password("123456")
+            manager.role = UserRole.YONETICI.value
+            manager.is_active = True
+            manager.must_change_password = False
+            if not manager.company_id:
+                first_company = db.query(Company).first()
+                if first_company:
+                    manager.company_id = first_company.id
+            print("INFO: Manager 'dmuslu' password set to 123456.")
+
+        # Ekstra test yöneticisi (mehmet) varsa onun da şifresini garantile
+        manager_mehmet = db.query(User).filter(User.username == "mehmet").first()
+        if manager_mehmet:
+            manager_mehmet.password = hash_password("123456")
+            manager_mehmet.role = UserRole.YONETICI.value
+            manager_mehmet.is_active = True
+            manager_mehmet.must_change_password = False
+            if not manager_mehmet.company_id:
+                first_company = db.query(Company).first()
+                if first_company:
+                    manager_mehmet.company_id = first_company.id
+
         db.commit()
     except Exception as exc:
         db.rollback()
