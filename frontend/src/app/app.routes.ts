@@ -63,8 +63,9 @@ import {
 import {
   PlatformDashboardComponent
 } from './pages/platform/platform-dashboard/platform-dashboard.component';
-import {QuizListComponent} from './pages/quiz/quiz-list.component';
-import {ShiftScheduleComponent} from './pages/shift/shift-schedule.component';
+
+import { QuizListComponent } from './pages/quiz/quiz-list.component';
+import { ShiftScheduleComponent } from './pages/shift/shift-schedule.component';
 
 
 export const routes: Routes = [
@@ -80,13 +81,6 @@ export const routes: Routes = [
       authGuard
     ]
   },
-
-  { path: 'quizzes',
-    component: QuizListComponent },
-
-
-  { path: 'shifts',
-    component: ShiftScheduleComponent },
 
   {
     path: '',
@@ -109,6 +103,25 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardComponent,
+
+        canActivate: [
+          companyUserGuard
+        ]
+      },
+
+      // Operasyon & Çalışma Modülleri (Layout İçinde)
+      {
+        path: 'quizzes',
+        component: QuizListComponent,
+
+        canActivate: [
+          companyUserGuard
+        ]
+      },
+
+      {
+        path: 'shifts',
+        component: ShiftScheduleComponent,
 
         canActivate: [
           companyUserGuard

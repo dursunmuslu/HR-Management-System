@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../core/services/auth.service';
 
 interface QuestionDraft {
   text: string;
@@ -13,11 +14,18 @@ interface QuestionDraft {
   selector: 'app-quiz-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './quiz-list.component.html'
+  templateUrl: './quiz-list.component.html',
+  styleUrl: './quiz-list.component.scss'
 })
 export class QuizListComponent implements OnInit, OnDestroy {
+  private http = inject(HttpClient);
+  private authService = inject(AuthService);
+
   apiUrl = 'https://hr-management-api-6rpx.onrender.com/operations/quizzes';
-  userRole = localStorage.getItem('role') || 'PERSONEL';
+
+  get isManager(): boolean {
+    return this.authService.getStoredUser()?.role === 'YONETICI';
+  }
 
   quizzes: any[] = [];
   activeQuiz: any = null;
@@ -28,11 +36,7 @@ export class QuizListComponent implements OnInit, OnDestroy {
   showModal = false;
   newTitle = '';
   newDuration = 15;
-  newQuestions: QuestionDraft[] = [
-    { text: '', options: ['', ''], correct_index: 0 }
-  ];
-
-  constructor(private http: HttpClient) {}
+  newQuestions: QuestionDraft[] = [{ text: '', options: ['', ''], correct_index: 0 }];
 
   ngOnInit(): void {
     this.loadQuizzes();
@@ -118,7 +122,7 @@ export class QuizListComponent implements OnInit, OnDestroy {
         this.newQuestions = [{ text: '', options: ['', ''], correct_index: 0 }];
         this.loadQuizzes();
       },
-      error: (err) => alert('Quiz kaydedilemedi: ' + err.message)
+      error: (err) => alert('Quiz eklenirken hata: ' + err.message)
     });
   }
 }

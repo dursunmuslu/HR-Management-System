@@ -14,6 +14,7 @@ from app.models.employee import Employee
 from app.models.leave_request import LeaveRequest
 from app.models.team import Team
 from app.models.user import User
+from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
 
 from app.security.password import hash_password
 from app.security.user_role import UserRole
@@ -26,6 +27,7 @@ from app.routers.employee_router import router as employee_router
 from app.routers.leave_router import router as leave_router
 from app.routers.platform_router import router as platform_router
 from app.routers.team_router import router as team_router
+from app.routers.quiz_shift_router import router as quiz_shift_router
 
 
 def init_db():
@@ -69,7 +71,7 @@ def init_db():
                     manager.company_id = first_company.id
             print("INFO: Manager 'dmuslu' password set to 123456.")
 
-        # Ekstra test yöneticisi (mehmet) varsa onun da şifresini garantile
+        # Test yöneticisi (mehmet)
         manager_mehmet = db.query(User).filter(User.username == "mehmet").first()
         if manager_mehmet:
             manager_mehmet.password = hash_password("123456")
@@ -154,6 +156,9 @@ app.include_router(team_router)
 app.include_router(employee_router)
 app.include_router(leave_router)
 app.include_router(dashboard_router)
+
+# Quiz & Shift Operations
+app.include_router(quiz_shift_router)
 
 
 # ============================================================

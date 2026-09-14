@@ -1,119 +1,113 @@
-<div class="p-6 max-w-6xl mx-auto space-y-6">
-  <div class="flex items-center justify-between border-b pb-4">
+<div class="module-container">
+  <!-- Üst Başlık -->
+  <div class="header-box">
     <div>
-      <h1 class="text-xl font-bold text-gray-900">Değerlendirme Quizleri</h1>
-      <p class="text-xs text-gray-500 mt-1">Oryantasyon, İSG ve şirket içi yetkinlik sınavları</p>
+      <h2>Değerlendirme Quizleri</h2>
+      <p>Personel oryantasyon ve şirket içi yetkinlik değerlendirme testleri</p>
     </div>
-    <button *ngIf="userRole === 'YONETICI'" (click)="showModal = true" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm">
+    <button *ngIf="isManager" class="btn-primary" (click)="showModal = true">
       + Yeni Quiz Tanımla
     </button>
   </div>
 
-  <!-- Sınav Modu -->
-  <div *ngIf="activeQuiz" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-3xl mx-auto space-y-6">
-    <div class="flex items-center justify-between border-b pb-4">
+  <!-- Sınav Çözme Ekranı -->
+  <div *ngIf="activeQuiz" class="card exam-card">
+    <div class="exam-header">
       <div>
-        <h2 class="text-base font-bold text-gray-900">{{ activeQuiz.title }}</h2>
-        <p class="text-xs text-gray-500">Süre dolmadan soruları tamamlayıp teslim ediniz.</p>
+        <h3>{{ activeQuiz.title }}</h3>
+        <p>Süre dolmadan soruları tamamlayıp teslim ediniz.</p>
       </div>
-      <div class="px-3 py-1.5 bg-red-50 text-red-600 font-mono font-bold text-sm rounded-lg border border-red-100 animate-pulse">
+      <div class="timer-badge">
         ⏳ Kalan: {{ formattedTime }}
       </div>
     </div>
 
-    <div *ngFor="let q of activeQuiz.questions; let qIdx = index" class="space-y-3">
-      <p class="text-sm font-semibold text-gray-800">{{ qIdx + 1 }}. {{ q.text }}</p>
-      <div class="space-y-2">
-        <label *ngFor="let opt of q.options; let optIdx = index" class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-700">
-          <input type="radio" [name]="'q_' + qIdx" [value]="optIdx" [(ngModel)]="selectedAnswers[qIdx]" class="text-indigo-600">
-          <span>{{ opt }}</span>
-        </label>
+    <div class="questions-list">
+      <div *ngFor="let q of activeQuiz.questions; let qIdx = index" class="question-block">
+        <p class="question-title">{{ qIdx + 1 }}. {{ q.text }}</p>
+        <div class="options-group">
+          <label *ngFor="let opt of q.options; let optIdx = index" class="option-label" [class.selected]="selectedAnswers[qIdx] === optIdx">
+            <input type="radio" [name]="'q_' + qIdx" [value]="optIdx" [(ngModel)]="selectedAnswers[qIdx]">
+            <span>{{ opt }}</span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <div class="pt-4 border-t flex justify-end gap-3">
-      <button (click)="activeQuiz = null" class="px-4 py-2 text-xs text-gray-600 border rounded-lg">Vazgeç</button>
-      <button (click)="finishQuiz()" class="px-6 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700">
-        Quizi Bitir & Gönder
-      </button>
+    <div class="exam-actions">
+      <button class="btn-secondary" (click)="activeQuiz = null">Vazgeç</button>
+      <button class="btn-primary" (click)="finishQuiz()">Quizi Tamamla & Gönder</button>
     </div>
   </div>
 
-  <!-- Quiz Listesi Kartları -->
-  <div *ngIf="!activeQuiz" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-    <div *ngFor="let q of quizzes" class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                [ngClass]="q.is_completed ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'">
-            {{ q.is_completed ? 'Tamamlandı' : 'Tamamlanmayan' }}
-          </span>
-          <span class="text-xs text-gray-400 font-medium">⏱ {{ q.duration_minutes }} Dk</span>
-        </div>
-        <h3 class="font-bold text-gray-900 text-sm mb-1">{{ q.title }}</h3>
-        <p class="text-xs text-gray-500 mb-4">{{ q.total_questions }} Soru</p>
+  <!-- Quiz Listesi -->
+  <div *ngIf="!activeQuiz" class="grid-cards">
+    <div *ngFor="let q of quizzes" class="card quiz-card">
+      <div class="quiz-badge-row">
+        <span class="badge" [class.badge-success]="q.is_completed" [class.badge-warning]="!q.is_completed">
+          {{ q.is_completed ? 'Tamamlandı' : 'Bekliyor' }}
+        </span>
+        <span class="quiz-time">⏱ {{ q.duration_minutes }} Dk</span>
       </div>
 
-      <div>
-        <div *ngIf="q.is_completed" class="text-xs font-bold text-green-700 mb-2">
-          Sonuç: {{ q.score }} / {{ q.total_questions }} Doğru
-        </div>
-        <button *ngIf="!q.is_completed" (click)="startQuiz(q)" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition">
+      <h3 class="quiz-title">{{ q.title }}</h3>
+      <p class="quiz-subtitle">{{ q.total_questions }} Soru</p>
+
+      <div class="quiz-footer">
+        <span *ngIf="q.is_completed" class="score-text">
+          Puanınız: <strong>{{ q.score }} / {{ q.total_questions }}</strong>
+        </span>
+        <button *ngIf="!q.is_completed" class="btn-primary w-full" (click)="startQuiz(q)">
           Quize Başla
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Yönetici Quiz Tanımlama Modalı -->
-  <div *ngIf="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-5">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-bold text-base text-gray-900">Yeni Quiz Tanımla</h3>
-        <button (click)="showModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
+  <!-- Yeni Quiz Modal -->
+  <div *ngIf="showModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Yeni Quiz Tanımla</h3>
+        <button class="modal-close" (click)="showModal = false">✕</button>
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
-        <div class="col-span-2">
-          <label class="block text-xs font-medium text-gray-700 mb-1">Quiz Başlığı</label>
-          <input type="text" [(ngModel)]="newTitle" placeholder="Örn: Oryantasyon Sınavı" class="w-full text-xs p-2.5 border rounded-lg">
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label>Quiz Başlığı</label>
+          <input type="text" [(ngModel)]="newTitle" placeholder="Örn: İSG Bilgilendirme Quizi">
         </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Süre (Dk)</label>
-          <input type="number" [(ngModel)]="newDuration" class="w-full text-xs p-2.5 border rounded-lg">
+        <div class="form-group flex-1">
+          <label>Süre (Dakika)</label>
+          <input type="number" [(ngModel)]="newDuration">
         </div>
       </div>
 
-      <!-- Sorular Listesi -->
-      <div class="space-y-4">
-        <div *ngFor="let q of newQuestions; let qIdx = index" class="p-4 bg-gray-50 rounded-xl border space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-xs font-bold text-gray-700">Soru {{ qIdx + 1 }}</span>
-            <button (click)="removeQuestion(qIdx)" class="text-xs text-red-500 hover:underline">Soruyu Sil</button>
+      <div class="questions-editor">
+        <div *ngFor="let q of newQuestions; let qIdx = index" class="question-edit-card">
+          <div class="q-header">
+            <span>Soru {{ qIdx + 1 }}</span>
+            <button class="btn-danger-text" (click)="removeQuestion(qIdx)">Sil</button>
           </div>
-          <input type="text" [(ngModel)]="q.text" placeholder="Soru metnini yazınız..." class="w-full text-xs p-2 border rounded-lg bg-white">
+          <input type="text" class="input-text" [(ngModel)]="q.text" placeholder="Soru metnini yazın...">
 
-          <div class="space-y-2 pl-2">
-            <p class="text-[11px] text-gray-500 font-medium">Seçenekler (Doğru seçeneğin yanındaki radyo butonunu işaretleyin):</p>
-            <div *ngFor="let opt of q.options; let optIdx = index" class="flex items-center gap-2">
+          <div class="options-edit-list">
+            <small>Doğru seçeneği radyo butonundan işaretleyin:</small>
+            <div *ngFor="let opt of q.options; let optIdx = index" class="opt-row">
               <input type="radio" [name]="'correct_' + qIdx" [value]="optIdx" [(ngModel)]="q.correct_index">
-              <input type="text" [(ngModel)]="q.options[optIdx]" placeholder="Seçenek {{ optIdx + 1 }}" class="flex-1 text-xs p-1.5 border rounded bg-white">
-              <button (click)="removeOption(qIdx, optIdx)" class="text-xs text-gray-400 hover:text-red-500">✕</button>
+              <input type="text" [(ngModel)]="q.options[optIdx]" placeholder="Seçenek {{ optIdx + 1 }}">
+              <button class="btn-del" (click)="removeOption(qIdx, optIdx)">✕</button>
             </div>
-            <button (click)="addOption(qIdx)" class="text-xs text-indigo-600 font-bold hover:underline">+ Seçenek Ekle</button>
+            <button class="btn-add-opt" (click)="addOption(qIdx)">+ Seçenek Ekle</button>
           </div>
         </div>
       </div>
 
-      <button (click)="addQuestion()" class="w-full py-2 border-2 border-dashed border-indigo-200 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-50">
-        + Yeni Soru Ekle
-      </button>
+      <button class="btn-dashed w-full" (click)="addQuestion()">+ Yeni Soru Ekle</button>
 
-      <div class="flex justify-end gap-3 pt-3 border-t">
-        <button (click)="showModal = false" class="px-4 py-2 text-xs border rounded-lg">İptal</button>
-        <button (click)="saveQuiz()" [disabled]="!newTitle" class="px-5 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700">
-          Quizi Yayınla
-        </button>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showModal = false">İptal</button>
+        <button class="btn-primary" [disabled]="!newTitle" (click)="saveQuiz()">Quizi Yayınla</button>
       </div>
     </div>
   </div>
