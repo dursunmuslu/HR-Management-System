@@ -95,11 +95,24 @@
           </span>
         </a>
 
-
-        <!-- OPERASYON & ÇALIŞMA (QUIZ VE VARDİYA) -->
+        <!-- ŞİRKET BİLGİ & OPERASYON (HER ZAMAN GÖRÜNÜR) -->
         <p class="navigation-title">
-          Operasyon & Çalışma
+          Şirket & Operasyon
         </p>
+
+        <a
+          routerLink="/announcements"
+          routerLinkActive="active"
+          (click)="closeSidebar()"
+        >
+          <span class="menu-icon">
+            📢
+          </span>
+
+          <span>
+            Duyurular
+          </span>
+        </a>
 
         <a
           routerLink="/quizzes"
@@ -128,7 +141,6 @@
             Vardiya & Molalar
           </span>
         </a>
-
 
         <p class="navigation-title">
           İzin Yönetimi
@@ -222,6 +234,20 @@
 
             <span>
               Personel Ekle
+            </span>
+          </a>
+
+          <a
+            routerLink="/company-settings"
+            routerLinkActive="active"
+            (click)="closeSidebar()"
+          >
+            <span class="menu-icon">
+              ⚙️
+            </span>
+
+            <span>
+              Şirket Modül Ayarları
             </span>
           </a>
 

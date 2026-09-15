@@ -1,0 +1,34 @@
+<div class="module-container">
+  <div class="header-box">
+    <div>
+      <h2>⚙️ Şirket Modül Ayarları</h2>
+      <p>Sol menüde hangi sekmelerin görüneceğini buradan açıp kapatabilirsiniz.</p>
+    </div>
+  </div>
+
+  <div class="card settings-list">
+    <div class="setting-item">
+      <div>
+        <strong>📢 Şirket İçi Genel Duyurular</strong>
+        <p>Sol menüde Duyurular panosunu gösterir.</p>
+      </div>
+      <input type="checkbox" [(ngModel)]="cfgAnnouncements" (change)="saveConfig()" class="toggle">
+    </div>
+
+    <div class="setting-item">
+      <div>
+        <strong>📝 Değerlendirme & Yetkinlik Quizleri</strong>
+        <p>Sol menüde Sınav ve Quizler sekmesini gösterir (İstemiyorsanız kapatın).</p>
+      </div>
+      <input type="checkbox" [(ngModel)]="cfgQuizzes" (change)="saveConfig()" class="toggle">
+    </div>
+
+    <div class="setting-item">
+      <div>
+        <strong>⏰ Vardiya ve Mola Çizelgesi</strong>
+        <p>Sol menüde personelin mola saatlerini görmesini sağlayan sekmeyi gösterir.</p>
+      </div>
+      <input type="checkbox" [(ngModel)]="cfgShifts" (change)="saveConfig()" class="toggle">
+    </div>
+  </div>
+</div>

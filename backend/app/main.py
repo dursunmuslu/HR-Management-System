@@ -1,14 +1,11 @@
 from contextlib import asynccontextmanager
+from datetime import date
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from app.database.database import get_db
-
-from app.database.database import Base, engine, SessionLocal
+from app.database.database import Base, engine, SessionLocal, get_db
 
 # Modeller SQLAlchemy relationship registry içinde
 # eksiksiz yüklensin diye import ediliyor.
@@ -35,10 +32,8 @@ from app.routers.quiz_shift_router import router as quiz_shift_router
 
 
 def init_db():
-    # 1. Tabloları PostgreSQL üzerinde oluştur
     Base.metadata.create_all(bind=engine)
 
-    # 2. Kullanıcıları garantile ve şifrelerini senkronize et
     db: Session = SessionLocal()
     try:
         # Platform Owner (dursun)
@@ -49,7 +44,6 @@ def init_db():
             owner.is_active = True
             owner.must_change_password = False
             owner.company_id = None
-            print("INFO: Platform owner 'dursun' password successfully synced to 123456.")
         else:
             owner = User(
                 username="dursun",
@@ -60,7 +54,6 @@ def init_db():
                 company_id=None,
             )
             db.add(owner)
-            print("INFO: Platform owner 'dursun' created with password 123456.")
 
         # Şirket Yöneticisi (dmuslu)
         manager = db.query(User).filter(User.username == "dmuslu").first()
@@ -73,7 +66,6 @@ def init_db():
                 first_company = db.query(Company).first()
                 if first_company:
                     manager.company_id = first_company.id
-            print("INFO: Manager 'dmuslu' password set to 123456.")
 
         # Test yöneticisi (mehmet)
         manager_mehmet = db.query(User).filter(User.username == "mehmet").first()
@@ -114,26 +106,17 @@ app = FastAPI(
 # ============================================================
 
 allowed_origins = [
-    # Angular local development
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-
-    # Capacitor Android
     "http://localhost",
     "https://localhost",
-
-    # Vercel production
     "https://hr-management-system-lilac.vercel.app",
 ]
-
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-
-    # Vercel preview / deployment adresleri
     allow_origin_regex=r"^https://.*\.vercel\.app$",
-
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -145,23 +128,14 @@ app.add_middleware(
 # ROUTERS
 # ============================================================
 
-# Authentication
 app.include_router(auth_router)
-
-# Platform owner işlemleri
 app.include_router(platform_router)
-
-# Company & organization
 app.include_router(company_router)
 app.include_router(department_router)
 app.include_router(team_router)
-
-# Human Resources
 app.include_router(employee_router)
 app.include_router(leave_router)
 app.include_router(dashboard_router)
-
-# Quiz & Shift Operations
 app.include_router(quiz_shift_router)
 
 
@@ -185,19 +159,8 @@ def health_check():
     }
 
 
-
-
 @app.get("/seed-fast", tags=["Seed"])
 def run_seed_fast(db: Session = Depends(get_db)):
-    from app.models.company import Company
-    from app.models.department import Department
-    from app.models.employee import Employee
-    from app.models.user import User
-    from app.models.quiz_and_shift import Quiz, ShiftSchedule
-    from app.security.password import hash_password
-    from app.security.user_role import UserRole
-    from datetime import date
-
     comp = db.query(Company).first()
     if not comp:
         return {"status": "error", "message": "Sistemde şirket bulunamadı!"}

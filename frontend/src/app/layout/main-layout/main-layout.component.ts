@@ -52,6 +52,19 @@ export class MainLayoutComponent {
       'PLATFORM_OWNER'
     );
   }
+    // main-layout.component.ts içinde bir yere ekle:
+  get showQuizzes(): boolean {
+    return localStorage.getItem('cfg_show_quizzes') !== 'false';
+  }
+
+  get showShifts(): boolean {
+    return localStorage.getItem('cfg_show_shifts') !== 'false';
+  }
+
+  get showAnnouncements(): boolean {
+    return localStorage.getItem('cfg_show_announcements') !== 'false';
+  }
+
 
   get isManager(): boolean {
     return (

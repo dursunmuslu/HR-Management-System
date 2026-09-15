@@ -66,7 +66,8 @@ import {
 
 import { QuizListComponent } from './pages/quiz/quiz-list.component';
 import { ShiftScheduleComponent } from './pages/shift/shift-schedule.component';
-
+import { AnnouncementsComponent } from './pages/announcements/announcements.component';
+import { CompanySettingsComponent } from './pages/company-settings/company-settings.component';
 
 export const routes: Routes = [
   {
@@ -85,16 +86,13 @@ export const routes: Routes = [
   {
     path: '',
     component: MainLayoutComponent,
-
     canActivate: [
       authGuard
     ],
-
     children: [
       {
         path: 'platform',
         component: PlatformDashboardComponent,
-
         canActivate: [
           platformOwnerGuard
         ]
@@ -103,17 +101,23 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardComponent,
-
         canActivate: [
           companyUserGuard
         ]
       },
 
-      // Operasyon & Çalışma Modülleri (Layout İçinde)
+      // Operasyon, Duyuru & Çalışma Modülleri
+      {
+        path: 'announcements',
+        component: AnnouncementsComponent,
+        canActivate: [
+          companyUserGuard
+        ]
+      },
+
       {
         path: 'quizzes',
         component: QuizListComponent,
-
         canActivate: [
           companyUserGuard
         ]
@@ -122,16 +126,15 @@ export const routes: Routes = [
       {
         path: 'shifts',
         component: ShiftScheduleComponent,
-
         canActivate: [
           companyUserGuard
         ]
       },
 
+      // İzin İşlemleri
       {
         path: 'leaves/my',
         component: MyLeavesComponent,
-
         canActivate: [
           companyUserGuard
         ]
@@ -140,7 +143,6 @@ export const routes: Routes = [
       {
         path: 'leaves/create',
         component: CreateLeaveComponent,
-
         canActivate: [
           companyUserGuard
         ]
@@ -149,17 +151,15 @@ export const routes: Routes = [
       {
         path: 'leave-requests',
         component: LeaveRequestsComponent,
-
         canActivate: [
           managerGuard
         ]
       },
 
+      // Yönetici İşlemleri
       {
         path: 'organization',
-        component:
-          OrganizationManagementComponent,
-
+        component: OrganizationManagementComponent,
         canActivate: [
           managerGuard
         ]
@@ -168,7 +168,6 @@ export const routes: Routes = [
       {
         path: 'employees',
         component: EmployeeListComponent,
-
         canActivate: [
           managerGuard
         ]
@@ -177,7 +176,14 @@ export const routes: Routes = [
       {
         path: 'employees/create',
         component: EmployeeFormComponent,
+        canActivate: [
+          managerGuard
+        ]
+      },
 
+      {
+        path: 'company-settings',
+        component: CompanySettingsComponent,
         canActivate: [
           managerGuard
         ]
@@ -186,9 +192,7 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-
         component: DashboardComponent,
-
         canActivate: [
           defaultRouteGuard
         ]
@@ -198,9 +202,7 @@ export const routes: Routes = [
 
   {
     path: '**',
-
     component: DashboardComponent,
-
     canActivate: [
       defaultRouteGuard
     ]

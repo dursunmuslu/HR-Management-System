@@ -1,17 +1,13 @@
 import { HttpClient } from '@angular/common/http';
-
 import {
   Injectable,
   inject
 } from '@angular/core';
-
 import {
   Observable,
   map
 } from 'rxjs';
-
 import { environment } from '../../../environments/environment';
-
 import {
   CreateEmployeeRequest,
   Employee,
@@ -20,7 +16,6 @@ import {
   UpdateUserRoleResponse
 } from '../models/employee.model';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -28,21 +23,18 @@ export class EmployeeService {
 
   private readonly http = inject(HttpClient);
 
+  // Localhost kalmışsa doğrudan canlı Render URL'ine yönlendirir
   private readonly apiRoot =
-    environment.apiUrl.replace(/\/+$/, '');
+    (environment?.apiUrl && !environment.apiUrl.includes('localhost'))
+      ? environment.apiUrl.replace(/\/+$/, '')
+      : 'https://hr-management-api-6rpx.onrender.com';
 
-  private readonly employeeApiUrl =
-    `${this.apiRoot}/employees`;
-
-  private readonly authApiUrl =
-    `${this.apiRoot}/auth`;
-
+  private readonly employeeApiUrl = `${this.apiRoot}/employees`;
+  private readonly authApiUrl = `${this.apiRoot}/auth`;
 
   getEmployees(): Observable<Employee[]> {
     return this.http
-      .get<Employee[]>(
-        this.employeeApiUrl
-      )
+      .get<Employee[]>(this.employeeApiUrl)
       .pipe(
         map(employees =>
           employees.map(employee =>
@@ -52,27 +44,19 @@ export class EmployeeService {
       );
   }
 
-
-  getEmployee(
-    employeeId: number
-  ): Observable<Employee> {
+  getEmployee(employeeId: number): Observable<Employee> {
     return this.http
-      .get<Employee>(
-        `${this.employeeApiUrl}/${employeeId}`
-      )
+      .get<Employee>(`${this.employeeApiUrl}/${employeeId}`)
       .pipe(
         map(employee =>
           this.normalizeEmployee(employee)
         )
       );
   }
-
 
   getMyProfile(): Observable<Employee> {
     return this.http
-      .get<Employee>(
-        `${this.employeeApiUrl}/me`
-      )
+      .get<Employee>(`${this.employeeApiUrl}/me`)
       .pipe(
         map(employee =>
           this.normalizeEmployee(employee)
@@ -80,10 +64,7 @@ export class EmployeeService {
       );
   }
 
-
-  createEmployee(
-    request: CreateEmployeeRequest
-  ): Observable<Employee> {
+  createEmployee(request: CreateEmployeeRequest): Observable<Employee> {
     return this.http
       .post<Employee>(
         `${this.employeeApiUrl}/create-with-user`,
@@ -95,7 +76,6 @@ export class EmployeeService {
         )
       );
   }
-
 
   updateEmployee(
     employeeId: number,
@@ -113,51 +93,35 @@ export class EmployeeService {
       );
   }
 
-
-  deleteEmployee(
-    employeeId: number
-  ): Observable<void> {
+  deleteEmployee(employeeId: number): Observable<void> {
     return this.http.delete<void>(
       `${this.employeeApiUrl}/${employeeId}`
     );
   }
 
-
   updateUserRole(
-  userId: number,
-  role: Exclude<
-    EmployeeRole,
-    'PLATFORM_OWNER'
-  >
+    userId: number,
+    role: Exclude<EmployeeRole, 'PLATFORM_OWNER'>
   ): Observable<UpdateUserRoleResponse> {
     return this.http.put<UpdateUserRoleResponse>(
       `${this.authApiUrl}/users/${userId}/role`,
-      {
-        role
-      }
-   );
+      { role }
+    );
   }
 
-
-  disableUser(
-    userId: number
-  ): Observable<UpdateUserRoleResponse> {
+  disableUser(userId: number): Observable<UpdateUserRoleResponse> {
     return this.http.patch<UpdateUserRoleResponse>(
       `${this.authApiUrl}/users/${userId}/disable`,
       {}
     );
   }
 
-
-  activateUser(
-    userId: number
-  ): Observable<UpdateUserRoleResponse> {
+  activateUser(userId: number): Observable<UpdateUserRoleResponse> {
     return this.http.patch<UpdateUserRoleResponse>(
       `${this.authApiUrl}/users/${userId}/activate`,
       {}
     );
   }
-
 
   resetPassword(
     userId: number,
@@ -165,17 +129,11 @@ export class EmployeeService {
   ): Observable<UpdateUserRoleResponse> {
     return this.http.post<UpdateUserRoleResponse>(
       `${this.authApiUrl}/users/${userId}/reset-password`,
-      {
-        temporary_password:
-          temporaryPassword
-      }
+      { temporary_password: temporaryPassword }
     );
   }
 
-
-  private normalizeEmployee(
-    employee: Employee
-  ): Employee {
+  private normalizeEmployee(employee: Employee): Employee {
     const departmentName =
       employee.team?.department?.name ??
       employee.department ??
@@ -183,34 +141,26 @@ export class EmployeeService {
 
     return {
       ...employee,
-
-      department:
-        departmentName,
-
+      department: departmentName,
       username:
         employee.username ??
         employee.user?.username ??
         null,
-
       role:
         employee.role ??
         employee.user?.role ??
         null,
-
       is_active:
         employee.is_active ??
         employee.user?.is_active ??
         true,
-
       must_change_password:
         employee.must_change_password ??
         employee.user?.must_change_password ??
         false,
-
       full_name:
         employee.full_name ??
-        `${employee.first_name} ${employee.last_name}`
-          .trim()
+        `${employee.first_name} ${employee.last_name}`.trim()
     };
   }
 }

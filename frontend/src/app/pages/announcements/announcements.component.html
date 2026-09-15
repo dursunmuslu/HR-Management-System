@@ -1,0 +1,61 @@
+<div class="module-container">
+  <div class="header-box">
+    <div>
+      <h2>📢 Genel Şirket Duyuruları</h2>
+      <p>Şirket içi resmi bilgilendirmeler, tatil günleri ve güncel duyurular</p>
+    </div>
+    <button *ngIf="isManager" class="btn-primary" (click)="showModal = true">
+      + Yeni Duyuru Ekle
+    </button>
+  </div>
+
+  <div class="announcements-grid">
+    <div *ngFor="let item of announcements" class="card announcement-card" [class.pinned]="item.isPinned">
+      <div class="card-header-row">
+        <span class="badge" [class.badge-pinned]="item.isPinned">{{ item.category }}</span>
+        <span class="date-text">{{ item.date }}</span>
+      </div>
+      <h3 class="item-title">{{ item.title }}</h3>
+      <p class="item-content">{{ item.content }}</p>
+      <div class="item-footer">
+        <small>Yayınlayan: <strong>{{ item.author }}</strong></small>
+        <span *ngIf="item.isPinned" class="pin-icon">📌 Sabitlendi</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yeni Duyuru Ekleme Modalı -->
+  <div *ngIf="showModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Yeni Duyuru Yayınla</h3>
+        <button class="modal-close" (click)="showModal = false">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label>Duyuru Başlığı</label>
+        <input type="text" [(ngModel)]="newTitle" placeholder="Örn: Servis Saatleri Değişikliği">
+      </div>
+
+      <div class="form-group">
+        <label>Kategori</label>
+        <select [(ngModel)]="newCategory">
+          <option value="Genel">Genel</option>
+          <option value="Resmi Tatil">Resmi Tatil</option>
+          <option value="Etkinlik">Etkinlik</option>
+          <option value="İK Duyurusu">İK Duyurusu</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Duyuru Metni</label>
+        <textarea rows="4" [(ngModel)]="newContent" placeholder="Duyurunun detaylarını buraya yazınız..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showModal = false">İptal</button>
+        <button class="btn-primary" (click)="addAnnouncement()">Yayınla</button>
+      </div>
+    </div>
+  </div>
+</div>
