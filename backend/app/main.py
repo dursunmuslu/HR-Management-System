@@ -7,8 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database.database import Base, engine, SessionLocal, get_db
 
-# Modeller SQLAlchemy relationship registry içinde
-# eksiksiz yüklensin diye import ediliyor.
+# Modeller SQLAlchemy relationship registry içinde eksiksiz yüklensin diye import ediliyor.
 from app.models.company import Company
 from app.models.department import Department
 from app.models.employee import Employee
@@ -36,7 +35,19 @@ def init_db():
 
     db: Session = SessionLocal()
     try:
-        # Platform Owner (dursun)
+        # 0. Varsayılan Şirket Güvencesi
+        company = db.query(Company).first()
+        if not company:
+            company = Company(
+                name="Muslu Teknoloji A.Ş.",
+                subdomain="muslu",
+                is_active=True
+            )
+            db.add(company)
+            db.commit()
+            db.refresh(company)
+
+        # 1. Platform Owner (dursun)
         owner = db.query(User).filter(User.username == "dursun").first()
         if owner:
             owner.password = hash_password("123456")
@@ -55,29 +66,33 @@ def init_db():
             )
             db.add(owner)
 
-        # Şirket Yöneticisi (dmuslu)
+        # 2. Şirket Yöneticisi (dmuslu)
         manager = db.query(User).filter(User.username == "dmuslu").first()
         if manager:
             manager.password = hash_password("123456")
             manager.role = UserRole.YONETICI.value
             manager.is_active = True
             manager.must_change_password = False
-            if not manager.company_id:
-                first_company = db.query(Company).first()
-                if first_company:
-                    manager.company_id = first_company.id
+            manager.company_id = company.id
+        else:
+            manager = User(
+                username="dmuslu",
+                password=hash_password("123456"),
+                role=UserRole.YONETICI.value,
+                is_active=True,
+                must_change_password=False,
+                company_id=company.id,
+            )
+            db.add(manager)
 
-        # Test yöneticisi (mehmet)
+        # 3. Test yöneticisi (mehmet)
         manager_mehmet = db.query(User).filter(User.username == "mehmet").first()
         if manager_mehmet:
             manager_mehmet.password = hash_password("123456")
             manager_mehmet.role = UserRole.YONETICI.value
             manager_mehmet.is_active = True
             manager_mehmet.must_change_password = False
-            if not manager_mehmet.company_id:
-                first_company = db.query(Company).first()
-                if first_company:
-                    manager_mehmet.company_id = first_company.id
+            manager_mehmet.company_id = company.id
 
         db.commit()
     except Exception as exc:
@@ -116,7 +131,7 @@ allowed_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"^https://.*\.vercel\.app$",
+    allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -163,7 +178,10 @@ def health_check():
 def run_seed_fast(db: Session = Depends(get_db)):
     comp = db.query(Company).first()
     if not comp:
-        return {"status": "error", "message": "Sistemde şirket bulunamadı!"}
+        comp = Company(name="Muslu Teknoloji A.Ş.", subdomain="muslu", is_active=True)
+        db.add(comp)
+        db.commit()
+        db.refresh(comp)
 
     # 1. Departmanlar
     dept_map = {}
@@ -183,7 +201,8 @@ def run_seed_fast(db: Session = Depends(get_db)):
     ]
 
     for p in demo_users:
-        if not db.query(User).filter_by(username=p["u"]).first():
+        user = db.query(User).filter_by(username=p["u"]).first()
+        if not user:
             user = User(
                 username=p["u"],
                 password=hash_password("123456"),
@@ -195,6 +214,8 @@ def run_seed_fast(db: Session = Depends(get_db)):
             db.add(user)
             db.flush()
 
+        emp = db.query(Employee).filter_by(user_id=user.id).first()
+        if not emp:
             emp = Employee(
                 company_id=comp.id,
                 user_id=user.id,

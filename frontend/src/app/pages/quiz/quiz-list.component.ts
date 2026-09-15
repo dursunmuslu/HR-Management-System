@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 
 interface QuestionDraft {
@@ -66,10 +66,17 @@ export class QuizListComponent implements OnInit, OnDestroy {
     if (this.timerInterval) clearInterval(this.timerInterval);
   }
 
+  private getAuthHeaders(): HttpHeaders {
+    const token = this.authService.getToken() || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+  }
+
   loadQuizzes(): void {
-    this.http.get<any[]>(this.apiUrl).subscribe({
+    this.http.get<any[]>(this.apiUrl, { headers: this.getAuthHeaders() }).subscribe({
       next: (res) => (this.quizzes = res),
-      error: (err) => console.error(err)
+      error: (err) => console.error('Quiz listesi yüklenemedi:', err)
     });
   }
 
@@ -90,9 +97,11 @@ export class QuizListComponent implements OnInit, OnDestroy {
 
   finishQuiz(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
-    this.http.post(`${this.apiUrl}/${this.activeQuiz.id}/submit`, {
-      selected_answers: this.selectedAnswers
-    }).subscribe({
+    this.http.post(
+      `${this.apiUrl}/${this.activeQuiz.id}/submit`,
+      { selected_answers: this.selectedAnswers },
+      { headers: this.getAuthHeaders() }
+    ).subscribe({
       next: () => {
         alert('Quiz tamamlandı ve sonucunuz kaydedildi!');
         this.activeQuiz = null;
@@ -108,14 +117,17 @@ export class QuizListComponent implements OnInit, OnDestroy {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  // Yönetici için sonuçları getiren fonksiyon
+  // Yönetici için sonuçları getiren fonksiyon (Token eklenmiş hatasız hali)
   openSubmissions(quiz: any): void {
     this.selectedQuizTitle = quiz.title;
     this.showSubmissionsModal = true;
     this.loadingSubmissions = true;
     this.submissions = [];
 
-    this.http.get<SubmissionItem[]>(`${this.apiUrl}/${quiz.id}/submissions`).subscribe({
+    this.http.get<SubmissionItem[]>(
+      `${this.apiUrl}/${quiz.id}/submissions`,
+      { headers: this.getAuthHeaders() }
+    ).subscribe({
       next: (res) => {
         this.submissions = res;
         this.loadingSubmissions = false;
@@ -154,14 +166,14 @@ export class QuizListComponent implements OnInit, OnDestroy {
       duration_minutes: this.newDuration,
       questions: this.newQuestions
     };
-    this.http.post(this.apiUrl, payload).subscribe({
+    this.http.post(this.apiUrl, payload, { headers: this.getAuthHeaders() }).subscribe({
       next: () => {
         this.showModal = false;
         this.newTitle = '';
         this.newQuestions = [{ text: '', options: ['', ''], correct_index: 0 }];
         this.loadQuizzes();
       },
-      error: (err) => alert('Quiz eklenirken hata: ' + err.message)
+      error: (err) => alert('Quiz eklenirken hata: ' + (err.error?.detail || err.message))
     });
   }
 }
