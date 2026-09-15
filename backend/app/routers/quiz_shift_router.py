@@ -113,30 +113,49 @@ def get_quiz_submissions(
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
 
+    # JOIN yerine bağımsız sorgu: SQLAlchemy model ilişki hatalarını ve 500'ü tamamen engeller
     submissions = (
-        db.query(QuizSubmission, User, Employee)
-        .join(User, User.id == QuizSubmission.user_id)
-        .outerjoin(Employee, Employee.user_id == User.id)
+        db.query(QuizSubmission)
         .filter(QuizSubmission.quiz_id == quiz_id)
+        .order_by(QuizSubmission.id.desc())
         .all()
     )
 
     results = []
-    for sub, usr, emp in submissions:
-        emp_name = f"{emp.first_name} {emp.last_name}" if emp else usr.username
-        job_title = emp.job_title if emp else "Belirtilmedi"
-        percentage = round((sub.score / sub.total_questions) * 100, 1) if sub.total_questions else 0
+    for sub in submissions:
+        usr = db.query(User).filter(User.id == sub.user_id).first()
+        emp = db.query(Employee).filter(Employee.user_id == sub.user_id).first() if usr else None
+
+        if emp:
+            emp_name = f"{emp.first_name} {emp.last_name}"
+            job_title = emp.job_title or "Personel"
+        elif usr:
+            emp_name = usr.username
+            job_title = "Kullanıcı"
+        else:
+            emp_name = "Bilinmeyen Kullanıcı"
+            job_title = "-"
+
+        total = sub.total_questions if (sub.total_questions and sub.total_questions > 0) else len(quiz.questions)
+        percentage = round((sub.score / total) * 100, 1) if total > 0 else 0
+
+        submitted_date = "Tamamlandı"
+        if getattr(sub, "completed_at", None):
+            try:
+                submitted_date = sub.completed_at.strftime("%d.%m.%Y %H:%M")
+            except Exception:
+                submitted_date = str(sub.completed_at)
 
         results.append({
             "id": sub.id,
             "employee_name": emp_name,
-            "username": usr.username,
+            "username": usr.username if usr else "-",
             "job_title": job_title,
             "score": sub.score,
-            "total_questions": sub.total_questions,
+            "total_questions": total,
             "percentage": percentage,
             "is_completed": sub.is_completed,
-            "submitted_at": getattr(sub, "completed_at", None) or "Tamamlandı"
+            "submitted_at": submitted_date
         })
 
     return results
