@@ -4,7 +4,7 @@
       <h2>Günlük Vardiya & Mola Takvimi</h2>
       <p>Günlük 3 adet 15 dk mola ve 1 adet 30 dk yemek molası çizelgesi</p>
     </div>
-    <button *ngIf="isManager" class="btn-primary" (click)="showEditModal = true">
+    <button *ngIf="isManager" class="btn-primary" (click)="openEditModal()">
       ⚙️ Vardiya & Mola Düzenle
     </button>
   </div>
@@ -85,35 +85,46 @@
         <button class="modal-close" (click)="showEditModal = false">✕</button>
       </div>
 
+      <!-- Kime Uygulanacak Dropdown'ı -->
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Uygulanacak Kapsam</label>
+        <select [(ngModel)]="selectedEmployeeId" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px;">
+          <option [ngValue]="null">🏢 Tüm Şirket (Genel Varsayılan)</option>
+          <option *ngFor="let emp of employeeList" [ngValue]="emp.id">
+            👤 {{ emp.first_name }} {{ emp.last_name }} ({{ emp.job_title || 'Personel' }})
+          </option>
+        </select>
+      </div>
+
       <div class="form-row">
         <div class="form-group flex-1">
           <label>Mesai Başlama</label>
-          <input type="text" [(ngModel)]="todayShift.start_time">
+          <input type="text" [(ngModel)]="editForm.start_time">
         </div>
         <div class="form-group flex-1">
           <label>Mesai Bitiş</label>
-          <input type="text" [(ngModel)]="todayShift.end_time">
+          <input type="text" [(ngModel)]="editForm.end_time">
         </div>
       </div>
 
       <div class="form-group">
         <label>1. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="todayShift.break_1">
+        <input type="text" [(ngModel)]="editForm.break_1">
       </div>
 
       <div class="form-group">
         <label>Öğle Yemeği (30 Dk)</label>
-        <input type="text" [(ngModel)]="todayShift.lunch_break">
+        <input type="text" [(ngModel)]="editForm.lunch_break">
       </div>
 
       <div class="form-group">
         <label>2. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="todayShift.break_2">
+        <input type="text" [(ngModel)]="editForm.break_2">
       </div>
 
       <div class="form-group">
         <label>3. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="todayShift.break_3">
+        <input type="text" [(ngModel)]="editForm.break_3">
       </div>
 
       <div class="modal-actions">

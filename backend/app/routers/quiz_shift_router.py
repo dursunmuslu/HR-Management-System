@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
 from app.models.user import User
+from app.models.employee import Employee
 from app.security.auth_dependency import get_current_user, require_manager_or_owner
 from app.security.user_role import UserRole
 
@@ -26,6 +27,7 @@ class QuizSubmitSchema(BaseModel):
 
 class ShiftSaveSchema(BaseModel):
     shift_date: Optional[str] = None
+    employee_id: Optional[int] = None
     start_time: str = "09:00"
     end_time: str = "18:00"
     break_1: str = "10:30 - 10:45"
@@ -101,6 +103,45 @@ def list_quizzes(
     return result
 
 
+@router.get("/quizzes/{quiz_id}/submissions")
+def get_quiz_submissions(
+    quiz_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_owner),
+):
+    quiz = db.query(Quiz).filter(Quiz.id == quiz_id, Quiz.company_id == current_user.company_id).first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
+
+    submissions = (
+        db.query(QuizSubmission, User, Employee)
+        .join(User, User.id == QuizSubmission.user_id)
+        .outerjoin(Employee, Employee.user_id == User.id)
+        .filter(QuizSubmission.quiz_id == quiz_id)
+        .all()
+    )
+
+    results = []
+    for sub, usr, emp in submissions:
+        emp_name = f"{emp.first_name} {emp.last_name}" if emp else usr.username
+        job_title = emp.job_title if emp else "Belirtilmedi"
+        percentage = round((sub.score / sub.total_questions) * 100, 1) if sub.total_questions else 0
+
+        results.append({
+            "id": sub.id,
+            "employee_name": emp_name,
+            "username": usr.username,
+            "job_title": job_title,
+            "score": sub.score,
+            "total_questions": sub.total_questions,
+            "percentage": percentage,
+            "is_completed": sub.is_completed,
+            "submitted_at": getattr(sub, "completed_at", None) or "Tamamlandı"
+        })
+
+    return results
+
+
 @router.post("/quizzes/{quiz_id}/submit")
 def submit_quiz(
     quiz_id: int,
@@ -150,15 +191,21 @@ def save_company_shift(
     current_user: User = Depends(require_manager_or_owner),
 ):
     today = data.shift_date or date.today().isoformat()
+
     shift = (
         db.query(ShiftSchedule)
-        .filter(ShiftSchedule.company_id == current_user.company_id, ShiftSchedule.shift_date == today)
+        .filter(
+            ShiftSchedule.company_id == current_user.company_id,
+            ShiftSchedule.shift_date == today,
+            ShiftSchedule.employee_id == data.employee_id
+        )
         .first()
     )
 
     if not shift:
         shift = ShiftSchedule(
             company_id=current_user.company_id,
+            employee_id=data.employee_id,
             shift_date=today,
             start_time=data.start_time,
             end_time=data.end_time,
@@ -187,15 +234,37 @@ def get_today_shift(
     current_user: User = Depends(get_current_user),
 ):
     today = date.today().isoformat()
-    shift = (
-        db.query(ShiftSchedule)
-        .filter(ShiftSchedule.company_id == current_user.company_id, ShiftSchedule.shift_date == today)
-        .first()
-    )
+    emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+
+    shift = None
+    # 1. Personele özel tanımlanmış vardiya var mı?
+    if emp:
+        shift = (
+            db.query(ShiftSchedule)
+            .filter(
+                ShiftSchedule.company_id == current_user.company_id,
+                ShiftSchedule.shift_date == today,
+                ShiftSchedule.employee_id == emp.id
+            )
+            .first()
+        )
+
+    # 2. Personele özel yoksa şirketin genel vardiyasını al
+    if not shift:
+        shift = (
+            db.query(ShiftSchedule)
+            .filter(
+                ShiftSchedule.company_id == current_user.company_id,
+                ShiftSchedule.shift_date == today,
+                ShiftSchedule.employee_id == None
+            )
+            .first()
+        )
 
     if not shift:
         return {
             "shift_date": today,
+            "employee_id": None,
             "start_time": "09:00",
             "end_time": "18:00",
             "break_1": "10:30 - 10:45",

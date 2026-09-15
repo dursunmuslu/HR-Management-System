@@ -60,6 +60,61 @@
         <button *ngIf="!q.is_completed" class="btn-primary w-full" (click)="startQuiz(q)">
           Quize Başla
         </button>
+
+        <!-- Yönetici Katılım İnceleme Butonu -->
+        <button *ngIf="isManager" class="btn-secondary w-full" style="margin-top: 8px;" (click)="openSubmissions(q)">
+          📊 Personel Sonuçları
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Katılım & Sonuçlar Modalı (Yönetici) -->
+  <div *ngIf="showSubmissionsModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <h3>{{ selectedQuizTitle }} - Sonuçlar</h3>
+          <small style="color: #64748b;">Personellerin sınav performansları</small>
+        </div>
+        <button class="modal-close" (click)="showSubmissionsModal = false">✕</button>
+      </div>
+
+      <div style="padding: 16px 0;">
+        <div *ngIf="loadingSubmissions" style="text-align: center; color: #64748b; padding: 20px;">
+          Sonuçlar getiriliyor...
+        </div>
+
+        <div *ngIf="!loadingSubmissions && submissions.length === 0" style="text-align: center; color: #94a3b8; padding: 20px;">
+          Bu testi henüz tamamlayan personel bulunmuyor.
+        </div>
+
+        <table *ngIf="!loadingSubmissions && submissions.length > 0" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e2e8f0; text-align: left; color: #475569;">
+              <th style="padding: 8px;">Personel</th>
+              <th style="padding: 8px;">Unvan</th>
+              <th style="padding: 8px;">Puan</th>
+              <th style="padding: 8px;">Başarı</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of submissions" style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 10px 8px;"><strong>{{ s.employee_name }}</strong></td>
+              <td style="padding: 10px 8px; color: #64748b;">{{ s.job_title }}</td>
+              <td style="padding: 10px 8px;">{{ s.score }} / {{ s.total_questions }}</td>
+              <td style="padding: 10px 8px;">
+                <span class="badge" [class.badge-success]="s.percentage >= 60" [class.badge-warning]="s.percentage < 60">
+                  %{{ s.percentage }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showSubmissionsModal = false">Kapat</button>
       </div>
     </div>
   </div>

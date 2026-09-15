@@ -11,7 +11,6 @@ class Quiz(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     duration_minutes = Column(Integer, default=15)
-    # [{"id": 1, "text": "Soru?", "options": ["A", "B", "C"], "correct_index": 0}]
     questions = Column(JSON, nullable=False, default=list)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -34,11 +33,10 @@ class ShiftSchedule(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    employee_id = Column(Integer, nullable=True)
+    employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=True)  # None ise şirket geneli
     shift_date = Column(String(10), nullable=False)
     start_time = Column(String(5), default="09:00")
     end_time = Column(String(5), default="18:00")
-    # 3x 15 dk standart mola + 1x 30 dk yemek molası
     break_1 = Column(String(20), default="10:30 - 10:45")
     lunch_break = Column(String(20), default="12:30 - 13:00")
     break_2 = Column(String(20), default="15:00 - 15:15")

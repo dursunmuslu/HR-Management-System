@@ -10,6 +10,18 @@ interface QuestionDraft {
   correct_index: number;
 }
 
+interface SubmissionItem {
+  id: number;
+  employee_name: string;
+  username: string;
+  job_title: string;
+  score: number;
+  total_questions: number;
+  percentage: number;
+  is_completed: boolean;
+  submitted_at: string;
+}
+
 @Component({
   selector: 'app-quiz-list',
   standalone: true,
@@ -24,7 +36,8 @@ export class QuizListComponent implements OnInit, OnDestroy {
   apiUrl = 'https://hr-management-api-6rpx.onrender.com/operations/quizzes';
 
   get isManager(): boolean {
-    return this.authService.getStoredUser()?.role === 'YONETICI';
+    const role = this.authService.getStoredUser()?.role;
+    return role === 'YONETICI' || role === 'PLATFORM_OWNER';
   }
 
   quizzes: any[] = [];
@@ -33,10 +46,17 @@ export class QuizListComponent implements OnInit, OnDestroy {
   timerSeconds = 0;
   timerInterval: any = null;
 
+  // Yeni Quiz Oluşturma State'leri
   showModal = false;
   newTitle = '';
   newDuration = 15;
   newQuestions: QuestionDraft[] = [{ text: '', options: ['', ''], correct_index: 0 }];
+
+  // Yönetici Katılım & Sonuç Modal State'leri
+  showSubmissionsModal = false;
+  loadingSubmissions = false;
+  submissions: SubmissionItem[] = [];
+  selectedQuizTitle = '';
 
   ngOnInit(): void {
     this.loadQuizzes();
@@ -86,6 +106,25 @@ export class QuizListComponent implements OnInit, OnDestroy {
     const mins = Math.floor(this.timerSeconds / 60);
     const secs = this.timerSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Yönetici için sonuçları getiren fonksiyon
+  openSubmissions(quiz: any): void {
+    this.selectedQuizTitle = quiz.title;
+    this.showSubmissionsModal = true;
+    this.loadingSubmissions = true;
+    this.submissions = [];
+
+    this.http.get<SubmissionItem[]>(`${this.apiUrl}/${quiz.id}/submissions`).subscribe({
+      next: (res) => {
+        this.submissions = res;
+        this.loadingSubmissions = false;
+      },
+      error: (err) => {
+        console.error('Sonuçlar yüklenirken hata oluştu:', err);
+        this.loadingSubmissions = false;
+      }
+    });
   }
 
   addQuestion(): void {
