@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 
-interface Announcement {
+export interface Announcement {
   id: number;
   title: string;
   category: string;
@@ -24,13 +24,15 @@ export class AnnouncementsComponent {
   private authService = inject(AuthService);
 
   get isManager(): boolean {
-    return this.authService.getStoredUser()?.role === 'YONETICI';
+    const role = this.authService.getStoredUser()?.role;
+    return role === 'YONETICI' || role === 'PLATFORM_OWNER';
   }
 
   showModal = false;
   newTitle = '';
   newCategory = 'Genel';
   newContent = '';
+  newIsPinned = false;
 
   announcements: Announcement[] = [
     {
@@ -53,21 +55,42 @@ export class AnnouncementsComponent {
     }
   ];
 
-  addAnnouncement(): void {
-    if (!this.newTitle || !this.newContent) return;
+  // Sabitlenenler her zaman en üstte sıralanır
+  get sortedAnnouncements(): Announcement[] {
+    return [...this.announcements].sort((a, b) => {
+      if (a.isPinned === b.isPinned) {
+        return b.id - a.id;
+      }
+      return a.isPinned ? -1 : 1;
+    });
+  }
 
-    this.announcements.unshift({
+  togglePin(item: Announcement): void {
+    if (!this.isManager) return;
+    item.isPinned = !item.isPinned;
+  }
+
+  addAnnouncement(): void {
+    if (!this.newTitle.trim() || !this.newContent.trim()) return;
+
+    const currentUser = this.authService.getStoredUser();
+    const newEntry: Announcement = {
       id: Date.now(),
-      title: this.newTitle,
+      title: this.newTitle.trim(),
       category: this.newCategory,
       date: 'Bugün',
-      author: this.authService.getStoredUser()?.username || 'Yönetici',
-      content: this.newContent,
-      isPinned: false
-    });
+      author: currentUser?.username || 'Yönetici',
+      content: this.newContent.trim(),
+      isPinned: this.newIsPinned
+    };
 
+    this.announcements.unshift(newEntry);
+
+    // Formu temizle ve kapat
     this.newTitle = '';
     this.newContent = '';
+    this.newCategory = 'Genel';
+    this.newIsPinned = false;
     this.showModal = false;
   }
 }

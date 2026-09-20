@@ -15,6 +15,7 @@ from app.models.leave_request import LeaveRequest
 from app.models.team import Team
 from app.models.user import User
 from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
+from app.models.announcement import Announcement
 
 from app.security.password import hash_password
 from app.security.user_role import UserRole
@@ -28,6 +29,8 @@ from app.routers.leave_router import router as leave_router
 from app.routers.platform_router import router as platform_router
 from app.routers.team_router import router as team_router
 from app.routers.quiz_shift_router import router as quiz_shift_router
+from app.routers.excel_upload_router import router as excel_upload_router
+from app.routers.announcement_router import router as announcement_router
 
 
 def init_db():
@@ -148,6 +151,8 @@ app.include_router(employee_router)
 app.include_router(leave_router)
 app.include_router(dashboard_router)
 app.include_router(quiz_shift_router)
+app.include_router(excel_upload_router)
+app.include_router(announcement_router)
 
 
 # ============================================================
@@ -197,7 +202,29 @@ def run_seed_fast(db: Session = Depends(get_db)):
             db.commit()
             db.refresh(team)
 
-        # 4. Takim Lideri (lider.ahmet)
+        # 4. Yonetici Profili (dmuslu)
+        mgr_user = db.query(User).filter_by(username="dmuslu").first()
+        if mgr_user:
+            mgr_emp = db.query(Employee).filter_by(user_id=mgr_user.id).first()
+            if not mgr_emp:
+                mgr_emp = Employee(
+                    user_id=mgr_user.id,
+                    team_id=team.id,
+                    first_name="Dursun",
+                    last_name="Muslu",
+                    tc_no="10000000000",
+                    employee_number="YON001",
+                    department="Yazilim & Bilisim",
+                    position="Genel Mudur / Yonetici",
+                    phone="05550000000",
+                    email="dursun@muslu.com",
+                    hire_date=date(2024, 1, 1),
+                    remaining_annual_leave=20,
+                )
+                db.add(mgr_emp)
+                db.commit()
+
+        # 5. Takim Lideri (lider.ahmet)
         lead_user = db.query(User).filter_by(username="lider.ahmet").first()
         if not lead_user:
             lead_user = User(
@@ -235,7 +262,7 @@ def run_seed_fast(db: Session = Depends(get_db)):
             team.team_leader_id = lead_emp.id
             db.commit()
 
-        # 5. Personel (mehmet.oz)
+        # 6. Personel (mehmet.oz)
         user_p = db.query(User).filter_by(username="mehmet.oz").first()
         if not user_p:
             user_p = User(
@@ -269,7 +296,7 @@ def run_seed_fast(db: Session = Depends(get_db)):
             db.add(emp_p)
             db.commit()
 
-        # 6. Sinav (Quiz)
+        # 7. Sinav (Quiz)
         if not db.query(Quiz).filter_by(company_id=comp.id).first():
             db.add(Quiz(
                 company_id=comp.id,
@@ -292,7 +319,7 @@ def run_seed_fast(db: Session = Depends(get_db)):
             ))
             db.commit()
 
-        # 7. Vardiya (ShiftSchedule)
+        # 8. Vardiya (ShiftSchedule)
         today = date.today().isoformat()
         if not db.query(ShiftSchedule).filter_by(company_id=comp.id, shift_date=today, employee_id=None).first():
             db.add(ShiftSchedule(
@@ -307,7 +334,19 @@ def run_seed_fast(db: Session = Depends(get_db)):
             ))
             db.commit()
 
-        return {"status": "success", "message": "Sirket, Takim Lideri, Personel ve Quiz seed islemi tamamlandi!"}
+        # 9. Baslangic Duyurulari (Announcements)
+        if not db.query(Announcement).filter_by(company_id=comp.id).first():
+            db.add(Announcement(
+                company_id=comp.id,
+                title="Sistem Versiyon 2.0 ve Mobil Entegrasyon Devrede",
+                category="Sistem Duyurusu",
+                content="HR SaaS altyapimiz yeni bulut veritabanina ve guncel vardiya takip sistemine basariyla tasinmistir.",
+                author_name="Dursun Muslu",
+                is_pinned=True
+            ))
+            db.commit()
+
+        return {"status": "success", "message": "Sirket, Yonetici, Takim Lideri, Personel, Duyuru ve Quiz seed islemi tamamlandi!"}
 
     except Exception as e:
         db.rollback()

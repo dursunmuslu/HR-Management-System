@@ -1,83 +1,192 @@
 <div class="module-container">
+  <!-- 1. Header -->
   <div class="header-box">
     <div>
-      <h2>Günlük Vardiya & Mola Takvimi</h2>
-      <p>Günlük 3 adet 15 dk mola ve 1 adet 30 dk yemek molası çizelgesi</p>
+      <h2>Vardiya & Mola Yönetimi</h2>
+      <p>Günlük mesai, çay molaları, yemek saatleri ve operasyonel planlama</p>
     </div>
-    <button *ngIf="isManager" class="btn-primary" (click)="openEditModal()">
-      ⚙️ Vardiya & Mola Düzenle
-    </button>
-  </div>
-
-  <!-- Çalışma Saatleri -->
-  <div class="time-cards-grid">
-    <div class="card time-card">
-      <div>
-        <span class="label">Mesai Başlangıcı</span>
-        <h3 class="time">{{ todayShift?.start_time }}</h3>
-      </div>
-      <div class="icon-bubble green">🟢</div>
-    </div>
-
-    <div class="card time-card">
-      <div>
-        <span class="label">Mesai Bitişi</span>
-        <h3 class="time">{{ todayShift?.end_time }}</h3>
-      </div>
-      <div class="icon-bubble red">🔴</div>
+    <div class="header-actions">
+      <button *ngIf="isLeaderOrManager" class="btn-primary" (click)="openGeneralEditModal()">
+        ⚙️ Genel Saatleri Düzenle
+      </button>
     </div>
   </div>
 
-  <!-- Molalar Listesi -->
-  <div class="card breaks-card">
-    <h3 class="card-title">Mola Çizelgesi</h3>
-
-    <div class="break-item primary">
-      <div class="break-info">
-        <span class="icon">☕</span>
-        <div>
-          <strong>1. Çay / Dinlenme Molası</strong>
-          <small>15 Dakika</small>
-        </div>
-      </div>
-      <span class="time-badge">{{ todayShift?.break_1 }}</span>
-    </div>
-
-    <div class="break-item food">
-      <div class="break-info">
-        <span class="icon">🍽️</span>
-        <div>
-          <strong>Öğle Yemek Molası</strong>
-          <small>30 Dakika</small>
-        </div>
-      </div>
-      <span class="time-badge">{{ todayShift?.lunch_break }}</span>
-    </div>
-
-    <div class="break-item primary">
-      <div class="break-info">
-        <span class="icon">☕</span>
-        <div>
-          <strong>2. Çay / Kahve Molası</strong>
-          <small>15 Dakika</small>
-        </div>
-      </div>
-      <span class="time-badge">{{ todayShift?.break_2 }}</span>
-    </div>
-
-    <div class="break-item primary">
-      <div class="break-info">
-        <span class="icon">☕</span>
-        <div>
-          <strong>3. Nefes / Dinlenme Molası</strong>
-          <small>15 Dakika</small>
-        </div>
-      </div>
-      <span class="time-badge">{{ todayShift?.break_3 }}</span>
+  <!-- 2. Bankacılık Stili Segment Seçici (Günlük / Haftalık) -->
+  <div class="segment-wrapper">
+    <div class="segment-container">
+      <button
+        type="button"
+        class="segment-btn"
+        [class.active]="viewMode === 'DAILY'"
+        (click)="switchMode('DAILY')">
+        <span class="icon">📅</span> Günlük Vardiya
+      </button>
+      <button
+        type="button"
+        class="segment-btn"
+        [class.active]="viewMode === 'WEEKLY'"
+        (click)="switchMode('WEEKLY')">
+        <span class="icon">🗓️</span> Haftalık Vardiya
+      </button>
     </div>
   </div>
 
-  <!-- Yönetici Düzenleme Modalı -->
+  <!-- ================= GÜNLÜK VARDİYA ================= -->
+  <ng-container *ngIf="viewMode === 'DAILY'">
+    <!-- Kişisel Günlük Özet Kartları -->
+    <div class="section-title">
+      <h4>📌 Bugünkü Çalışma Saatlerim</h4>
+    </div>
+
+    <div class="time-cards-grid">
+      <div class="card time-card">
+        <div>
+          <span class="label">Mesai Başlangıcı</span>
+          <h3 class="time">{{ todayShift?.start_time }}</h3>
+        </div>
+        <div class="icon-bubble green">🟢</div>
+      </div>
+
+      <div class="card time-card">
+        <div>
+          <span class="label">Mesai Bitişi</span>
+          <h3 class="time">{{ todayShift?.end_time }}</h3>
+        </div>
+        <div class="icon-bubble red">🔴</div>
+      </div>
+    </div>
+
+    <!-- Mola Detay Kartı -->
+    <div class="card breaks-card">
+      <h3 class="card-title">Mola Çizelgesi</h3>
+
+      <div class="break-item primary">
+        <div class="break-info">
+          <span class="icon">☕</span>
+          <div>
+            <strong>1. Çay / Dinlenme Molası</strong>
+            <small>15 Dakika</small>
+          </div>
+        </div>
+        <span class="time-badge">{{ todayShift?.break_1 }}</span>
+      </div>
+
+      <div class="break-item food">
+        <div class="break-info">
+          <span class="icon">🍽️</span>
+          <div>
+            <strong>Öğle Yemek Molası</strong>
+            <small>30 Dakika</small>
+          </div>
+        </div>
+        <span class="time-badge">{{ todayShift?.lunch_break }}</span>
+      </div>
+
+      <div class="break-item primary">
+        <div class="break-info">
+          <span class="icon">☕</span>
+          <div>
+            <strong>2. Çay / Kahve Molası</strong>
+            <small>15 Dakika</small>
+          </div>
+        </div>
+        <span class="time-badge">{{ todayShift?.break_2 }}</span>
+      </div>
+
+      <div class="break-item primary">
+        <div class="break-info">
+          <span class="icon">☕</span>
+          <div>
+            <strong>3. Nefes / Dinlenme Molası</strong>
+            <small>15 Dakika</small>
+          </div>
+        </div>
+        <span class="time-badge">{{ todayShift?.break_3 }}</span>
+      </div>
+    </div>
+
+    <!-- Yönetici & Takım Lideri Operasyon Paneli -->
+    <div *ngIf="isLeaderOrManager" class="manager-section">
+      <div class="section-header">
+        <div>
+          <h3>👥 Ekip & Personel Günlük Çizelgesi</h3>
+          <p>Tarihe göre personellerin mesai ve mola durumları</p>
+        </div>
+        <div class="date-controls">
+          <label>Tarih:</label>
+          <input type="date" [(ngModel)]="selectedDate" (change)="loadDailyList()" />
+        </div>
+      </div>
+
+      <!-- Günlük Excel Yükleme Kutusu -->
+      <div class="excel-box card">
+        <div class="excel-info">
+          <strong>📊 Günlük Excel ile Toplu Vardiya Güncelle</strong>
+          <small>Her güne özel mesai saatleri ve molaları tek tıkla içeri aktarın.</small>
+        </div>
+        <div class="excel-actions">
+          <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xlsx,.csv" style="display: none" />
+          <button class="btn-secondary" (click)="fileInput.click()">
+            📁 Dosya Seç {{ selectedFile ? '(' + selectedFile.name + ')' : '' }}
+          </button>
+          <button *ngIf="selectedFile" class="btn-primary" (click)="uploadExcel()">
+            🚀 Yükle
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="uploadStatusMessage" class="alert-success">
+        {{ uploadStatusMessage }}
+      </div>
+
+      <!-- Tablo -->
+      <div class="card table-wrapper">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Takım</th>
+              <th>Mesai Saatleri</th>
+              <th>Öğle Molası</th>
+              <th>Çay Molaları</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of dailyList">
+              <td class="bold-name">{{ item.full_name }}</td>
+              <td><span class="badge-team">{{ item.team_name }}</span></td>
+              <td><span class="badge-shift">{{ item.start_time }} - {{ item.end_time }}</span></td>
+              <td>{{ item.lunch_break }}</td>
+              <td>{{ item.break_1 }} | {{ item.break_2 }}</td>
+              <td>
+                <button class="btn-edit" (click)="openSingleEditModal(item)">✏️ Düzenle</button>
+              </td>
+            </tr>
+            <tr *ngIf="dailyList.length === 0">
+              <td colspan="6" class="empty-state">Seçilen tarihe ait vardiya kaydı bulunamadı.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ================= HAFTALIK VARDİYA ================= -->
+  <ng-container *ngIf="viewMode === 'WEEKLY'">
+    <div class="card weekly-box">
+      <div class="weekly-header">
+        <h3>🗓️ 7 Günlük Operasyonel Vardiya Planı</h3>
+        <p>Haftalık döngüde personellerin gün gün mesai ve haftalık izin (OFF) dağılımı</p>
+      </div>
+      <div class="alert-info">
+        Haftalık otomatik vardiya dağıtımı, vardiya şablonları ve nöbet planlama bu sekmeden yönetilir.
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Düzenleme Modalı -->
   <div *ngIf="showEditModal" class="modal-backdrop">
     <div class="modal-box">
       <div class="modal-header">
@@ -85,13 +194,17 @@
         <button class="modal-close" (click)="showEditModal = false">✕</button>
       </div>
 
-      <!-- Kime Uygulanacak Dropdown'ı -->
-      <div class="form-group" style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Uygulanacak Kapsam</label>
-        <select [(ngModel)]="selectedEmployeeId" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px;">
+      <div class="form-group">
+        <label>Tarih</label>
+        <input type="date" [(ngModel)]="selectedDate" />
+      </div>
+
+      <div class="form-group">
+        <label>Uygulanacak Kapsam</label>
+        <select [(ngModel)]="selectedEmployeeId">
           <option [ngValue]="null">🏢 Tüm Şirket (Genel Varsayılan)</option>
           <option *ngFor="let emp of employeeList" [ngValue]="emp.id">
-            👤 {{ emp.first_name }} {{ emp.last_name }} ({{ emp.job_title || 'Personel' }})
+            👤 {{ emp.first_name }} {{ emp.last_name }} ({{ emp.position || emp.job_title || 'Personel' }})
           </option>
         </select>
       </div>
@@ -99,32 +212,32 @@
       <div class="form-row">
         <div class="form-group flex-1">
           <label>Mesai Başlama</label>
-          <input type="text" [(ngModel)]="editForm.start_time">
+          <input type="text" [(ngModel)]="editForm.start_time" placeholder="09:00" />
         </div>
         <div class="form-group flex-1">
           <label>Mesai Bitiş</label>
-          <input type="text" [(ngModel)]="editForm.end_time">
+          <input type="text" [(ngModel)]="editForm.end_time" placeholder="18:00" />
         </div>
       </div>
 
       <div class="form-group">
         <label>1. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="editForm.break_1">
+        <input type="text" [(ngModel)]="editForm.break_1" placeholder="10:30 - 10:45" />
       </div>
 
       <div class="form-group">
         <label>Öğle Yemeği (30 Dk)</label>
-        <input type="text" [(ngModel)]="editForm.lunch_break">
+        <input type="text" [(ngModel)]="editForm.lunch_break" placeholder="12:30 - 13:00" />
       </div>
 
       <div class="form-group">
         <label>2. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="editForm.break_2">
+        <input type="text" [(ngModel)]="editForm.break_2" placeholder="15:00 - 15:15" />
       </div>
 
       <div class="form-group">
         <label>3. Mola (15 Dk)</label>
-        <input type="text" [(ngModel)]="editForm.break_3">
+        <input type="text" [(ngModel)]="editForm.break_3" placeholder="16:45 - 17:00" />
       </div>
 
       <div class="modal-actions">

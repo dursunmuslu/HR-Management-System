@@ -1,17 +1,17 @@
 from datetime import date
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+from app.models.company import Company
 from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
 from app.models.user import User
 from app.models.employee import Employee
 from app.models.team import Team
 from app.security.auth_dependency import (
     get_current_user,
-    require_manager_or_owner,
     require_leader_manager_or_owner,
 )
 from app.security.user_role import UserRole
@@ -27,7 +27,7 @@ class QuizCreateSchema(BaseModel):
 
 
 class QuizSubmitSchema(BaseModel):
-    selected_answers: list[int]
+    selected_answers: List[int]
 
 
 class ShiftSaveSchema(BaseModel):
@@ -42,27 +42,29 @@ class ShiftSaveSchema(BaseModel):
 
 
 # ================= QUIZ ENDPOINTS =================
+
 @router.post("/quizzes")
 def create_quiz(
     data: QuizCreateSchema,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_leader_manager_or_owner),
 ):
-    if not current_user.company_id and current_user.role != UserRole.PLATFORM_OWNER.value:
-        raise HTTPException(status_code=400, detail="Hesabınız bir şirkete bağlı değil.")
-
     target_company_id = current_user.company_id
+
     if current_user.role == UserRole.PLATFORM_OWNER.value and not target_company_id:
-        # Eğer owner ise ilk şirkete bağla veya hata döndürme
-        first_comp = db.query(Team).first()
-        target_company_id = first_comp.department.company_id if first_comp else 1
+        first_comp = db.query(Company).first()
+        target_company_id = first_comp.id if first_comp else 1
+
+    if not target_company_id:
+        raise HTTPException(status_code=400, detail="Hesabınız bir şirkete bağlı değil.")
 
     quiz = Quiz(
         company_id=target_company_id,
         title=data.title,
-        description=data.description,
+        description=data.description or "",
         duration_minutes=data.duration_minutes,
         questions=data.questions,
+        is_active=True,
     )
     db.add(quiz)
     db.commit()
@@ -96,7 +98,7 @@ def list_quizzes(
         sub = submissions.get(q.id)
         safe_questions = []
         for ques in (q.questions or []):
-            item = {
+            item: Dict[str, Any] = {
                 "text": ques.get("text"),
                 "options": ques.get("options", []),
             }
@@ -130,7 +132,6 @@ def get_quiz_submissions(
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
 
-    # Şirket kontrolü
     if current_user.role != UserRole.PLATFORM_OWNER.value:
         if quiz.company_id != current_user.company_id:
             raise HTTPException(status_code=403, detail="Bu quize erişim yetkiniz yok.")
@@ -142,28 +143,27 @@ def get_quiz_submissions(
         .all()
     )
 
-    # Takım Lideri için takım sınırlaması
     leader_team_id = None
     if current_user.role == UserRole.TAKIM_LIDERI.value:
         leader_emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
-        leader_team_id = leader_emp.team_id if leader_emp else -1
+        leader_team_id = leader_emp.team_id if leader_emp else None
 
-    # İlgili kullanıcıları ve personelleri toplu çek
     user_ids = [s.user_id for s in submissions]
     employees = db.query(Employee).filter(Employee.user_id.in_(user_ids)).all() if user_ids else []
     emp_by_user = {e.user_id: e for e in employees}
 
-    # Takımları çek
     team_ids = [e.team_id for e in employees if e.team_id]
     teams = db.query(Team).filter(Team.id.in_(team_ids)).all() if team_ids else []
     team_by_id = {t.id: t.name for t in teams}
 
+    users = db.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
+    user_by_id = {u.id: u for u in users}
+
     results = []
     for sub in submissions:
         emp = emp_by_user.get(sub.user_id)
-        usr = db.query(User).filter(User.id == sub.user_id).first()
+        usr = user_by_id.get(sub.user_id)
 
-        # Takım Lideri sadece kendi takımını görür
         if leader_team_id is not None:
             if not emp or emp.team_id != leader_team_id:
                 continue
@@ -216,11 +216,7 @@ def submit_quiz(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    quiz = (
-        db.query(Quiz)
-        .filter(Quiz.id == quiz_id)
-        .first()
-    )
+    quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
 
@@ -255,6 +251,7 @@ def submit_quiz(
 
 
 # ================= SHIFT & BREAK ENDPOINTS =================
+
 @router.post("/shifts")
 def save_company_shift(
     data: ShiftSaveSchema,
@@ -264,12 +261,15 @@ def save_company_shift(
     today = data.shift_date or date.today().isoformat()
     company_id = current_user.company_id
 
-    # Takım lideri kontrolü: Başka bir personelin vardiyasını giriyorsa o personel kendi takımında mı?
+    # Takım lideri kontrolü
     if current_user.role == UserRole.TAKIM_LIDERI.value and data.employee_id:
         leader_emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
         target_emp = db.query(Employee).filter(Employee.id == data.employee_id).first()
         if not leader_emp or not target_emp or leader_emp.team_id != target_emp.team_id:
-            raise HTTPException(status_code=403, detail="Yalnızca kendi takımınızdaki personelin vardiyasını düzenleyebilirsiniz.")
+            raise HTTPException(
+                status_code=403,
+                detail="Yalnızca kendi takımınızdaki personelin vardiyasını düzenleyebilirsiniz."
+            )
 
     shift = (
         db.query(ShiftSchedule)
@@ -350,3 +350,61 @@ def get_today_shift(
             "break_3": "16:45 - 17:00",
         }
     return shift
+
+
+@router.get("/shifts/daily-list")
+def get_daily_shifts_list(
+    shift_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_leader_manager_or_owner),
+):
+    target_date = shift_date or date.today().isoformat()
+    company_id = current_user.company_id or 1
+
+    emp_query = db.query(Employee)
+    if current_user.role != UserRole.PLATFORM_OWNER.value:
+        emp_query = emp_query.join(User, User.id == Employee.user_id).filter(User.company_id == company_id)
+
+    # Takım lideri ise sadece kendi takımını getir
+    if current_user.role == UserRole.TAKIM_LIDERI.value:
+        leader_emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        leader_team_id = leader_emp.team_id if leader_emp else -1
+        emp_query = emp_query.filter(Employee.team_id == leader_team_id)
+
+    employees = emp_query.all()
+
+    # Genel şirket varsayılanı var mı?
+    default_shift = db.query(ShiftSchedule).filter(
+        ShiftSchedule.company_id == company_id,
+        ShiftSchedule.shift_date == target_date,
+        ShiftSchedule.employee_id.is_(None)
+    ).first()
+
+    results = []
+    for emp in employees:
+        shift = db.query(ShiftSchedule).filter(
+            ShiftSchedule.company_id == company_id,
+            ShiftSchedule.shift_date == target_date,
+            ShiftSchedule.employee_id == emp.id
+        ).first()
+
+        active_shift = shift or default_shift
+        team_name = emp.team.name if emp.team else "Genel Ekip"
+        job_title = getattr(emp, "position", None) or getattr(emp, "job_title", "Personel")
+
+        results.append({
+            "employee_id": emp.id,
+            "tc_no": emp.tc_no,
+            "full_name": f"{emp.first_name} {emp.last_name}",
+            "team_name": team_name,
+            "job_title": job_title,
+            "shift_date": target_date,
+            "start_time": active_shift.start_time if active_shift else "09:00",
+            "end_time": active_shift.end_time if active_shift else "18:00",
+            "break_1": active_shift.break_1 if active_shift else "10:30 - 10:45",
+            "lunch_break": active_shift.lunch_break if active_shift else "12:30 - 13:00",
+            "break_2": active_shift.break_2 if active_shift else "15:00 - 15:15",
+            "break_3": active_shift.break_3 if active_shift else "16:45 - 17:00",
+        })
+
+    return results

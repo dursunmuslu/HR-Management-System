@@ -10,16 +10,35 @@
   </div>
 
   <div class="announcements-grid">
-    <div *ngFor="let item of announcements" class="card announcement-card" [class.pinned]="item.isPinned">
+    <div
+      *ngFor="let item of sortedAnnouncements"
+      class="card announcement-card"
+      [class.pinned]="item.isPinned"
+    >
       <div class="card-header-row">
-        <span class="badge" [class.badge-pinned]="item.isPinned">{{ item.category }}</span>
-        <span class="date-text">{{ item.date }}</span>
+        <div class="badge-group">
+          <span class="badge" [class.badge-pinned]="item.isPinned">{{ item.category }}</span>
+          <span *ngIf="item.isPinned" class="badge-pinned-label">📌 Öne Çıkarıldı</span>
+        </div>
+        <div class="header-right">
+          <span class="date-text">{{ item.date }}</span>
+          <button
+            *ngIf="isManager"
+            class="btn-pin-toggle"
+            (click)="togglePin(item)"
+            [title]="item.isPinned ? 'Sabitlemeyi Kaldır' : 'Başa Sabitle'"
+          >
+            {{ item.isPinned ? '📌 Kaldır' : '📍 Sabitle' }}
+          </button>
+        </div>
       </div>
+
       <h3 class="item-title">{{ item.title }}</h3>
       <p class="item-content">{{ item.content }}</p>
+
       <div class="item-footer">
         <small>Yayınlayan: <strong>{{ item.author }}</strong></small>
-        <span *ngIf="item.isPinned" class="pin-icon">📌 Sabitlendi</span>
+        <span *ngIf="item.isPinned" class="pin-icon">⭐ Önemli Duyuru</span>
       </div>
     </div>
   </div>
@@ -34,7 +53,7 @@
 
       <div class="form-group">
         <label>Duyuru Başlığı</label>
-        <input type="text" [(ngModel)]="newTitle" placeholder="Örn: Servis Saatleri Değişikliği">
+        <input type="text" [(ngModel)]="newTitle" placeholder="Örn: Servis Saatleri Değişikliği" />
       </div>
 
       <div class="form-group">
@@ -50,6 +69,14 @@
       <div class="form-group">
         <label>Duyuru Metni</label>
         <textarea rows="4" [(ngModel)]="newContent" placeholder="Duyurunun detaylarını buraya yazınız..."></textarea>
+      </div>
+
+      <!-- Sabitleme / Öne Çıkarma Kutusu -->
+      <div class="form-group-checkbox">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="newIsPinned" />
+          <span>📌 Bu duyuruyu en başa sabitle ve öne çıkar</span>
+        </label>
       </div>
 
       <div class="modal-actions">
