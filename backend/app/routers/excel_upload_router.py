@@ -74,15 +74,14 @@ async def upload_employees_excel(
                 db.commit()
                 db.refresh(team)
 
-            # 3. User Hesabı (Mükerrer önleme)
+            # 3. User Hesabı (Sadece username üzerinden kontrol edilir, User modelinde email yoktur)
             username = email.split("@")[0]
-            user = db.query(User).filter((User.email == email) | (User.username == username)).first()
+            user = db.query(User).filter(User.username == username).first()
             assigned_role = UserRole.TAKIM_LIDERI.value if "LIDER" in role_str else UserRole.PERSONEL.value
 
             if not user:
                 user = User(
                     username=username,
-                    email=email,
                     password=hash_password("123456"),
                     role=assigned_role,
                     company_id=target_company_id,
@@ -97,8 +96,10 @@ async def upload_employees_excel(
                 user.company_id = target_company_id
                 db.commit()
 
-            # 4. Employee Kartı (UPSERT)
-            emp = db.query(Employee).filter((Employee.tc_no == tc) | (Employee.user_id == user.id)).first()
+            # 4. Employee Kartı Kontrolü (TC veya Email Employee tablosundan kontrol edilir)
+            emp = db.query(Employee).filter(
+                (Employee.tc_no == tc) | (Employee.email == email) | (Employee.user_id == user.id)
+            ).first()
 
             if not emp:
                 emp = Employee(
@@ -133,7 +134,7 @@ async def upload_employees_excel(
             if assigned_role == UserRole.TAKIM_LIDERI.value:
                 leader_assignments.append((team.id, emp.id))
 
-        # 5. Takım Lideri Atamaları
+        # 5. Takım Liderlerini Takımlara Bağla
         for t_id, leader_emp_id in leader_assignments:
             t = db.query(Team).filter(Team.id == t_id).first()
             if t:
