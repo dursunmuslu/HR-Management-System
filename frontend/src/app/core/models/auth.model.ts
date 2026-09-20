@@ -1,8 +1,9 @@
-export type UserRole =
-  | 'PLATFORM_OWNER'
-  | 'YONETICI'
-  | 'PERSONEL';
-
+export enum UserRole {
+  PLATFORM_OWNER = 'PLATFORM_OWNER',
+  YONETICI = 'YONETICI',
+  TAKIM_LIDERI = 'TAKIM_LIDERI',
+  PERSONEL = 'PERSONEL'
+}
 
 export interface LoginRequest {
   username: string;

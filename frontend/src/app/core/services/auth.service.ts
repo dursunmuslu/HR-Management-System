@@ -203,6 +203,14 @@ export class AuthService {
   }
 
 
+  isTeamLeader(): boolean {
+    return (
+      this.getStoredUser()?.role ===
+      'TAKIM_LIDERI'
+    );
+  }
+
+
   isEmployee(): boolean {
     return (
       this.getStoredUser()?.role ===
@@ -217,7 +225,20 @@ export class AuthService {
 
     return (
       role === 'YONETICI' ||
+      role === 'TAKIM_LIDERI' ||
       role === 'PERSONEL'
+    );
+  }
+
+
+  canManageOperations(): boolean {
+    const role =
+      this.getStoredUser()?.role;
+
+    return (
+      role === 'PLATFORM_OWNER' ||
+      role === 'YONETICI' ||
+      role === 'TAKIM_LIDERI'
     );
   }
 
