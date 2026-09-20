@@ -25,31 +25,6 @@ import { AnnouncementsComponent } from './pages/announcements/announcements.comp
 import { CompanySettingsComponent } from './pages/company-settings/company-settings.component';
 import { TimesheetsComponent } from './pages/timesheets/timesheets.component';
 
-// Modül kapalıysa Dashboard'a yönlendiren fonksiyonel Guard'lar
-const quizFeatureGuard = () => {
-  const router = inject(Router);
-  const isEnabled = localStorage.getItem('cfg_show_quizzes') !== 'false';
-  return isEnabled ? true : router.createUrlTree(['/dashboard']);
-};
-
-const shiftFeatureGuard = () => {
-  const router = inject(Router);
-  const isEnabled = localStorage.getItem('cfg_show_shifts') !== 'false';
-  return isEnabled ? true : router.createUrlTree(['/dashboard']);
-};
-
-const announcementFeatureGuard = () => {
-  const router = inject(Router);
-  const isEnabled = localStorage.getItem('cfg_show_announcements') !== 'false';
-  return isEnabled ? true : router.createUrlTree(['/dashboard']);
-};
-
-const timesheetFeatureGuard = () => {
-  const router = inject(Router);
-  const isEnabled = localStorage.getItem('cfg_show_timesheets') !== 'false';
-  return isEnabled ? true : router.createUrlTree(['/dashboard']);
-};
-
 export const routes: Routes = [
   {
     path: 'login',
@@ -75,30 +50,26 @@ export const routes: Routes = [
         component: DashboardComponent,
         canActivate: [companyUserGuard]
       },
-
-      // Operasyon, Duyuru & Çalışma Modülleri (Modül Guard'larıyla Tam Korumalı)
       {
         path: 'announcements',
         component: AnnouncementsComponent,
-        canActivate: [companyUserGuard, announcementFeatureGuard]
+        canActivate: [companyUserGuard]
       },
       {
         path: 'quizzes',
         component: QuizListComponent,
-        canActivate: [companyUserGuard, quizFeatureGuard]
+        canActivate: [companyUserGuard]
       },
       {
         path: 'shifts',
         component: ShiftScheduleComponent,
-        canActivate: [companyUserGuard, shiftFeatureGuard]
+        canActivate: [companyUserGuard]
       },
       {
         path: 'timesheets',
         component: TimesheetsComponent,
-        canActivate: [companyUserGuard, timesheetFeatureGuard]
+        canActivate: [companyUserGuard]
       },
-
-      // İzin İşlemleri
       {
         path: 'leaves/my',
         component: MyLeavesComponent,
@@ -114,8 +85,6 @@ export const routes: Routes = [
         component: LeaveRequestsComponent,
         canActivate: [managerGuard]
       },
-
-      // Yönetici İşlemleri
       {
         path: 'organization',
         component: OrganizationManagementComponent,
@@ -136,7 +105,6 @@ export const routes: Routes = [
         component: CompanySettingsComponent,
         canActivate: [managerGuard]
       },
-
       {
         path: '',
         pathMatch: 'full',

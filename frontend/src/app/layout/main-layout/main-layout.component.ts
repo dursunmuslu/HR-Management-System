@@ -41,19 +41,30 @@ export class MainLayoutComponent implements OnInit {
   };
 
   ngOnInit(): void {
-    if (!this.isPlatformOwner) {
-      this.loadSettings();
-    }
+    this.loadSettings();
   }
 
   loadSettings(): void {
     this.http.get<CompanyModuleSettings>(this.settingsApiUrl).subscribe({
-      next: (settings: CompanyModuleSettings) => {
+      next: (settings: any) => {
         if (settings) {
-          this.moduleSettings = { ...this.moduleSettings, ...settings };
+          this.moduleSettings = {
+            is_announcements_enabled: settings.is_announcements_enabled ?? true,
+            is_quizzes_enabled: settings.is_quizzes_enabled ?? true,
+            is_shifts_enabled: settings.is_shifts_enabled ?? true,
+            is_leaves_enabled: settings.is_leaves_enabled ?? true,
+            is_timesheets_enabled: settings.is_timesheets_enabled ?? true
+          };
+          // LocalStorage'ı da senkronize et ki guardlar engellemesin
+          localStorage.setItem('cfg_show_quizzes', String(this.moduleSettings.is_quizzes_enabled));
+          localStorage.setItem('cfg_show_shifts', String(this.moduleSettings.is_shifts_enabled));
+          localStorage.setItem('cfg_show_announcements', String(this.moduleSettings.is_announcements_enabled));
+          localStorage.setItem('cfg_show_timesheets', String(this.moduleSettings.is_timesheets_enabled));
         }
       },
-      error: () => {}
+      error: () => {
+        // Backend dönmezse bile ekranda her şey açık kalsın
+      }
     });
   }
 
@@ -62,22 +73,26 @@ export class MainLayoutComponent implements OnInit {
   }
 
   get isPlatformOwner(): boolean {
-    return this.currentUser?.role === 'PLATFORM_OWNER';
+    const role = String(this.currentUser?.role || '').toUpperCase();
+    return role === 'PLATFORM_OWNER';
   }
 
   get isManager(): boolean {
-    const role = this.currentUser?.role;
-    return role === 'YONETICI' || role === 'PLATFORM_OWNER';
+    const role = String(this.currentUser?.role || '').toUpperCase();
+    return role === 'YONETICI' || role === 'PLATFORM_OWNER' || role === 'MANAGER';
   }
 
   get isTeamLeader(): boolean {
-    return this.currentUser?.role === 'TAKIM_LIDERI';
+    const role = String(this.currentUser?.role || '').toUpperCase();
+    return role === 'TAKIM_LIDERI' || role === 'TEAM_LEADER';
   }
 
   get isEmployee(): boolean {
-    return this.currentUser?.role === 'PERSONEL';
+    const role = String(this.currentUser?.role || '').toUpperCase();
+    return role === 'PERSONEL' || role === 'EMPLOYEE';
   }
 
+  // YÖNETİCİ HER ZAMAN GÖRÜR; PERSONEL AYAR AÇIKSA GÖRÜR
   get showAnnouncements(): boolean {
     return this.isManager || this.moduleSettings.is_announcements_enabled !== false;
   }
