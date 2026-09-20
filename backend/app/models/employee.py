@@ -64,7 +64,6 @@ class Employee(Base):
         nullable=False,
     )
 
-    # Geçiş tamamlanana kadar korunacak.
     department: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
@@ -105,6 +104,7 @@ class Employee(Base):
     team = relationship(
         "Team",
         back_populates="employees",
+        foreign_keys=[team_id],
     )
 
     leave_requests = relationship(

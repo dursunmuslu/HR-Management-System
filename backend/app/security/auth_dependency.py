@@ -122,9 +122,6 @@ def require_password_changed(
     """
     Geçici şifre kullanan hesapların yönetim ve
     uygulama endpoint'lerine erişmesini engeller.
-
-    /auth/change-password endpoint'i bu dependency'yi
-    kullanmamalıdır.
     """
 
     if current_user.must_change_password:
@@ -196,6 +193,38 @@ def require_manager(
     return current_user
 
 
+def require_team_leader(
+    current_user: User = Depends(
+        require_password_changed
+    ),
+) -> User:
+    """
+    Yalnızca takım lideri rolüne izin verir.
+    """
+
+    if (
+        current_user.role !=
+        UserRole.TAKIM_LIDERI.value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Team leader authorization is required."
+            ),
+        )
+
+    if current_user.company_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Team leader account is not associated "
+                "with a company."
+            ),
+        )
+
+    return current_user
+
+
 def require_employee(
     current_user: User = Depends(
         require_password_changed
@@ -252,19 +281,48 @@ def require_manager_or_owner(
     return current_user
 
 
+def require_leader_manager_or_owner(
+    current_user: User = Depends(
+        require_password_changed
+    ),
+) -> User:
+    """
+    Takım Lideri, Şirket Yöneticisi veya Platform Sahibine izin verir.
+    (Vardiya girişi, takım quiz sonuçları ve operasyon takibi için kullanılır)
+    """
+
+    allowed_roles = {
+        UserRole.PLATFORM_OWNER.value,
+        UserRole.YONETICI.value,
+        UserRole.TAKIM_LIDERI.value,
+    }
+
+    if current_user.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Team leader, company manager or platform owner "
+                "authorization is required."
+            ),
+        )
+
+    return current_user
+
+
 def require_company_user(
     current_user: User = Depends(
         require_password_changed
     ),
 ) -> User:
     """
-    Şirkete bağlı yönetici ve personellere izin verir.
-    Platform sahibi şirket içi endpoint'lere bu
-    dependency üzerinden erişemez.
+    Şirkete bağlı tüm kullanıcılara (Yönetici, Takım Lideri, Personel) izin verir.
+    Platform sahibi şirket içi operasyonel endpoint'lere bu
+    dependency üzerinden doğrudan erişemez.
     """
 
     allowed_roles = {
         UserRole.YONETICI.value,
+        UserRole.TAKIM_LIDERI.value,
         UserRole.PERSONEL.value,
     }
 

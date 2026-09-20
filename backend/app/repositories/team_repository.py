@@ -21,6 +21,7 @@ class TeamRepository:
                 .joinedload(Department.company),
 
                 joinedload(Team.employees),
+                joinedload(Team.team_leader),
             )
         )
 
@@ -86,31 +87,6 @@ class TeamRepository:
             .filter(
                 Team.department_id == department_id,
                 Department.company_id == company_id,
-            )
-            .order_by(
-                Team.name.asc()
-            )
-            .all()
-        )
-
-    @staticmethod
-    def find_active_by_department_and_company(
-        db: Session,
-        department_id: int,
-        company_id: int,
-    ) -> list[Team]:
-        return (
-            TeamRepository
-            ._query_with_relations(db)
-            .join(
-                Department,
-                Team.department_id == Department.id,
-            )
-            .filter(
-                Team.department_id == department_id,
-                Department.company_id == company_id,
-                Department.is_active.is_(True),
-                Team.is_active.is_(True),
             )
             .order_by(
                 Team.name.asc()

@@ -24,8 +24,6 @@ class User(Base):
         index=True,
     )
 
-    # PLATFORM_OWNER herhangi bir şirkete bağlı değildir.
-    # YONETICI ve PERSONEL için zorunlu olacaktır.
     company_id = Column(
         Integer,
         ForeignKey(
@@ -106,21 +104,16 @@ class User(Base):
 
     @property
     def is_platform_owner(self) -> bool:
-        return (
-            self.role ==
-            UserRole.PLATFORM_OWNER.value
-        )
+        return self.role == UserRole.PLATFORM_OWNER.value
 
     @property
     def is_company_manager(self) -> bool:
-        return (
-            self.role ==
-            UserRole.YONETICI.value
-        )
+        return self.role == UserRole.YONETICI.value
+
+    @property
+    def is_team_leader(self) -> bool:
+        return self.role == UserRole.TAKIM_LIDERI.value
 
     @property
     def is_employee(self) -> bool:
-        return (
-            self.role ==
-            UserRole.PERSONEL.value
-        )
+        return self.role == UserRole.PERSONEL.value

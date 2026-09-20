@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 from datetime import date
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database.database import Base, engine, SessionLocal, get_db
 
-# Modeller SQLAlchemy relationship registry içinde eksiksiz yüklensin diye import ediliyor.
 from app.models.company import Company
 from app.models.department import Department
 from app.models.employee import Employee
@@ -31,15 +31,22 @@ from app.routers.quiz_shift_router import router as quiz_shift_router
 
 
 def init_db():
+    try:
+        with engine.connect() as connection:
+            with connection.begin():
+                connection.execute(text("DROP TABLE IF EXISTS teams CASCADE;"))
+    except Exception as e:
+        print(f"Tablo temizleme notu: {e}")
+
     Base.metadata.create_all(bind=engine)
 
     db: Session = SessionLocal()
     try:
-        # 0. Varsayılan Şirket Güvencesi
+        # 0. Varsayilan Sirket Guvencesi
         company = db.query(Company).first()
         if not company:
             company = Company(
-                name="Muslu Teknoloji A.Ş.",
+                name="Muslu Teknoloji A.S.",
                 subdomain="muslu",
                 is_active=True
             )
@@ -66,7 +73,7 @@ def init_db():
             )
             db.add(owner)
 
-        # 2. Şirket Yöneticisi (dmuslu)
+        # 2. Sirket Yoneticisi (dmuslu)
         manager = db.query(User).filter(User.username == "dmuslu").first()
         if manager:
             manager.password = hash_password("123456")
@@ -84,15 +91,6 @@ def init_db():
                 company_id=company.id,
             )
             db.add(manager)
-
-        # 3. Test yöneticisi (mehmet)
-        manager_mehmet = db.query(User).filter(User.username == "mehmet").first()
-        if manager_mehmet:
-            manager_mehmet.password = hash_password("123456")
-            manager_mehmet.role = UserRole.YONETICI.value
-            manager_mehmet.is_active = True
-            manager_mehmet.must_change_password = False
-            manager_mehmet.company_id = company.id
 
         db.commit()
     except Exception as exc:
@@ -115,7 +113,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 # ============================================================
 # CORS CONFIGURATION
 # ============================================================
@@ -137,7 +134,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
 
 # ============================================================
 # ROUTERS
@@ -176,94 +172,143 @@ def health_check():
 
 @app.get("/seed-fast", tags=["Seed"])
 def run_seed_fast(db: Session = Depends(get_db)):
-    comp = db.query(Company).first()
-    if not comp:
-        comp = Company(name="Muslu Teknoloji A.Ş.", subdomain="muslu", is_active=True)
-        db.add(comp)
-        db.commit()
-        db.refresh(comp)
+    try:
+        # 1. Sirket
+        comp = db.query(Company).first()
+        if not comp:
+            comp = Company(name="Muslu Teknoloji A.S.", subdomain="muslu", is_active=True)
+            db.add(comp)
+            db.commit()
+            db.refresh(comp)
 
-    # 1. Departmanlar
-    dept_map = {}
-    for d_name, d_code in [("Yazılım & Bilişim", "YAZ"), ("İnsan Kaynakları", "IK"), ("Pazarlama & Satış", "PAZ")]:
-        dept = db.query(Department).filter_by(company_id=comp.id, name=d_name).first()
+        # 2. Departman
+        dept = db.query(Department).filter_by(company_id=comp.id, name="Yazilim & Bilisim").first()
         if not dept:
-            dept = Department(company_id=comp.id, name=d_name, code=d_code)
+            dept = Department(company_id=comp.id, name="Yazilim & Bilisim")
             db.add(dept)
-            db.flush()
-        dept_map[d_name] = dept.id
+            db.commit()
+            db.refresh(dept)
 
-    # 2. Hazır Personeller
-    demo_users = [
-        {"u": "ahmet.yilmaz", "name": "Ahmet", "last": "Yılmaz", "title": "Frontend Dev", "dept": dept_map["Yazılım & Bilişim"]},
-        {"u": "ayse.kaya", "name": "Ayşe", "last": "Kaya", "title": "İK Uzmanı", "dept": dept_map["İnsan Kaynakları"]},
-        {"u": "mehmet.oz", "name": "Mehmet", "last": "Öz", "title": "Full Stack Dev", "dept": dept_map["Yazılım & Bilişim"]},
-    ]
+        # 3. Takim
+        team = db.query(Team).filter_by(name="Frontend & Mobil Ekibi").first()
+        if not team:
+            team = Team(department_id=dept.id, name="Frontend & Mobil Ekibi")
+            db.add(team)
+            db.commit()
+            db.refresh(team)
 
-    for p in demo_users:
-        user = db.query(User).filter_by(username=p["u"]).first()
-        if not user:
-            user = User(
-                username=p["u"],
+        # 4. Takim Lideri (lider.ahmet)
+        lead_user = db.query(User).filter_by(username="lider.ahmet").first()
+        if not lead_user:
+            lead_user = User(
+                username="lider.ahmet",
+                password=hash_password("123456"),
+                role=UserRole.TAKIM_LIDERI.value,
+                company_id=comp.id,
+                is_active=True,
+                must_change_password=False,
+            )
+            db.add(lead_user)
+            db.commit()
+            db.refresh(lead_user)
+
+        lead_emp = db.query(Employee).filter_by(user_id=lead_user.id).first()
+        if not lead_emp:
+            lead_emp = Employee(
+                user_id=lead_user.id,
+                team_id=team.id,
+                first_name="Ahmet",
+                last_name="Lider",
+                tc_no="10000000001",
+                employee_number="TL001",
+                department="Yazilim & Bilisim",
+                position="Takim Lideri",
+                phone="05551112233",
+                email="lider.ahmet@muslu.com",
+                hire_date=date(2025, 1, 1),
+                remaining_annual_leave=14,
+            )
+            db.add(lead_emp)
+            db.commit()
+            db.refresh(lead_emp)
+
+            team.team_leader_id = lead_emp.id
+            db.commit()
+
+        # 5. Personel (mehmet.oz)
+        user_p = db.query(User).filter_by(username="mehmet.oz").first()
+        if not user_p:
+            user_p = User(
+                username="mehmet.oz",
                 password=hash_password("123456"),
                 role=UserRole.PERSONEL.value,
                 company_id=comp.id,
                 is_active=True,
-                must_change_password=False
+                must_change_password=False,
             )
-            db.add(user)
-            db.flush()
+            db.add(user_p)
+            db.commit()
+            db.refresh(user_p)
 
-        emp = db.query(Employee).filter_by(user_id=user.id).first()
-        if not emp:
-            emp = Employee(
+        emp_p = db.query(Employee).filter_by(user_id=user_p.id).first()
+        if not emp_p:
+            emp_p = Employee(
+                user_id=user_p.id,
+                team_id=team.id,
+                first_name="Mehmet",
+                last_name="Oz",
+                tc_no="10000000002",
+                employee_number="P002",
+                department="Yazilim & Bilisim",
+                position="Full Stack Dev",
+                phone="05551112234",
+                email="mehmet.oz@muslu.com",
+                hire_date=date(2025, 2, 1),
+                remaining_annual_leave=14,
+            )
+            db.add(emp_p)
+            db.commit()
+
+        # 6. Sinav (Quiz)
+        if not db.query(Quiz).filter_by(company_id=comp.id).first():
+            db.add(Quiz(
                 company_id=comp.id,
-                user_id=user.id,
-                department_id=p["dept"],
-                first_name=p["name"],
-                last_name=p["last"],
-                job_title=p["title"],
-                hire_date=date(2025, 1, 15),
-                work_email=f"{p['u']}@sirket.com",
-                annual_leave_balance=14
-            )
-            db.add(emp)
+                title="Temel ISG ve Bilgi Guvenligi",
+                description="Tum ekipler icin zorunlu yeterlilik sinavi.",
+                duration_minutes=10,
+                is_active=True,
+                questions=[
+                    {
+                        "text": "Acil cikis kapilari mesai saatinde nasil tutulmalidir?",
+                        "options": ["Kilitli", "Her zaman acik ve engelsiz", "Yalnizca anahtarla acilabilir"],
+                        "correct_index": 1
+                    },
+                    {
+                        "text": "Masa basinda temiz ekran kurali neyi ifade eder?",
+                        "options": ["Monitorun tozunu almayi", "Bilgisayar basindan ayrilirken ekrani kilitlemeyi (Win+L)", "Ekran koruyucu acmayi"],
+                        "correct_index": 1
+                    }
+                ]
+            ))
+            db.commit()
 
-    # 3. Quiz
-    if not db.query(Quiz).filter_by(company_id=comp.id).first():
-        db.add(Quiz(
-            company_id=comp.id,
-            title="İş Sağlığı ve Güvenliği (İSG) Sınavı",
-            description="Temel zorunlu eğitim değerlendirmesi.",
-            duration_minutes=10,
-            is_active=True,
-            questions=[
-                {
-                    "text": "Acil durumda tahliye toplanma alanına nasıl gidilir?",
-                    "options": ["Asansör kullanarak", "Yangın merdiveni ve acil çıkış levhalarını izleyerek", "Koşarak"],
-                    "correct_index": 1
-                },
-                {
-                    "text": "Bilgisayar başında 20-20-20 kuralı neyi ifade eder?",
-                    "options": ["20 dakikada bir 20 saniye 6 metre uzağa bakmayı", "20 saat çalışmayı", "Hiç mola vermemeyi"],
-                    "correct_index": 0
-                }
-            ]
-        ))
+        # 7. Vardiya (ShiftSchedule)
+        today = date.today().isoformat()
+        if not db.query(ShiftSchedule).filter_by(company_id=comp.id, shift_date=today, employee_id=None).first():
+            db.add(ShiftSchedule(
+                company_id=comp.id,
+                shift_date=today,
+                start_time="09:00",
+                end_time="18:00",
+                break_1="10:30 - 10:45",
+                lunch_break="12:30 - 13:00",
+                break_2="15:00 - 15:15",
+                break_3="16:45 - 17:00"
+            ))
+            db.commit()
 
-    # 4. Vardiya
-    today = date.today().isoformat()
-    if not db.query(ShiftSchedule).filter_by(company_id=comp.id, shift_date=today).first():
-        db.add(ShiftSchedule(
-            company_id=comp.id,
-            shift_date=today,
-            start_time="09:00",
-            end_time="18:00",
-            break_1="10:30 - 10:45",
-            lunch_break="12:30 - 13:00",
-            break_2="15:00 - 15:15",
-            break_3="16:45 - 17:00"
-        ))
+        return {"status": "success", "message": "Sirket, Takim Lideri, Personel ve Quiz seed islemi tamamlandi!"}
 
-    db.commit()
-    return {"status": "success", "message": "Demo personeller, sınavlar ve vardiya başarıyla veritabanına işlendi!"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Seed Hatasi: {str(e)}")

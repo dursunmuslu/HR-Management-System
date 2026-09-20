@@ -8,7 +8,12 @@ from app.database.database import get_db
 from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
 from app.models.user import User
 from app.models.employee import Employee
-from app.security.auth_dependency import get_current_user, require_manager_or_owner
+from app.models.team import Team
+from app.security.auth_dependency import (
+    get_current_user,
+    require_manager_or_owner,
+    require_leader_manager_or_owner,
+)
 from app.security.user_role import UserRole
 
 router = APIRouter(prefix="/operations", tags=["Quiz and Shifts"])
@@ -41,13 +46,19 @@ class ShiftSaveSchema(BaseModel):
 def create_quiz(
     data: QuizCreateSchema,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_owner),
+    current_user: User = Depends(require_leader_manager_or_owner),
 ):
-    if not current_user.company_id:
+    if not current_user.company_id and current_user.role != UserRole.PLATFORM_OWNER.value:
         raise HTTPException(status_code=400, detail="Hesabınız bir şirkete bağlı değil.")
 
+    target_company_id = current_user.company_id
+    if current_user.role == UserRole.PLATFORM_OWNER.value and not target_company_id:
+        # Eğer owner ise ilk şirkete bağla veya hata döndürme
+        first_comp = db.query(Team).first()
+        target_company_id = first_comp.department.company_id if first_comp else 1
+
     quiz = Quiz(
-        company_id=current_user.company_id,
+        company_id=target_company_id,
         title=data.title,
         description=data.description,
         duration_minutes=data.duration_minutes,
@@ -64,26 +75,32 @@ def list_quizzes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    quizzes = (
-        db.query(Quiz)
-        .filter(Quiz.company_id == current_user.company_id, Quiz.is_active == True)
-        .all()
-    )
+    query = db.query(Quiz).filter(Quiz.is_active.is_(True))
+    if current_user.company_id:
+        query = query.filter(Quiz.company_id == current_user.company_id)
+
+    quizzes = query.all()
     submissions = {
         s.quiz_id: s
         for s in db.query(QuizSubmission).filter(QuizSubmission.user_id == current_user.id).all()
     }
 
+    privileged_roles = [
+        UserRole.YONETICI.value,
+        UserRole.PLATFORM_OWNER.value,
+        UserRole.TAKIM_LIDERI.value,
+    ]
+
     result = []
     for q in quizzes:
         sub = submissions.get(q.id)
         safe_questions = []
-        for ques in q.questions:
+        for ques in (q.questions or []):
             item = {
                 "text": ques.get("text"),
                 "options": ques.get("options", []),
             }
-            if current_user.role in [UserRole.YONETICI.value, UserRole.PLATFORM_OWNER.value]:
+            if current_user.role in privileged_roles:
                 item["correct_index"] = ques.get("correct_index")
             safe_questions.append(item)
 
@@ -93,7 +110,7 @@ def list_quizzes(
                 "title": q.title,
                 "description": q.description,
                 "duration_minutes": q.duration_minutes,
-                "total_questions": len(q.questions),
+                "total_questions": len(q.questions or []),
                 "questions": safe_questions,
                 "is_completed": sub is not None,
                 "score": sub.score if sub else None,
@@ -107,13 +124,17 @@ def list_quizzes(
 def get_quiz_submissions(
     quiz_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_owner),
+    current_user: User = Depends(require_leader_manager_or_owner),
 ):
-    quiz = db.query(Quiz).filter(Quiz.id == quiz_id, Quiz.company_id == current_user.company_id).first()
+    quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
 
-    # JOIN yerine bağımsız sorgu: SQLAlchemy model ilişki hatalarını ve 500'ü tamamen engeller
+    # Şirket kontrolü
+    if current_user.role != UserRole.PLATFORM_OWNER.value:
+        if quiz.company_id != current_user.company_id:
+            raise HTTPException(status_code=403, detail="Bu quize erişim yetkiniz yok.")
+
     submissions = (
         db.query(QuizSubmission)
         .filter(QuizSubmission.quiz_id == quiz_id)
@@ -121,22 +142,46 @@ def get_quiz_submissions(
         .all()
     )
 
+    # Takım Lideri için takım sınırlaması
+    leader_team_id = None
+    if current_user.role == UserRole.TAKIM_LIDERI.value:
+        leader_emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        leader_team_id = leader_emp.team_id if leader_emp else -1
+
+    # İlgili kullanıcıları ve personelleri toplu çek
+    user_ids = [s.user_id for s in submissions]
+    employees = db.query(Employee).filter(Employee.user_id.in_(user_ids)).all() if user_ids else []
+    emp_by_user = {e.user_id: e for e in employees}
+
+    # Takımları çek
+    team_ids = [e.team_id for e in employees if e.team_id]
+    teams = db.query(Team).filter(Team.id.in_(team_ids)).all() if team_ids else []
+    team_by_id = {t.id: t.name for t in teams}
+
     results = []
     for sub in submissions:
+        emp = emp_by_user.get(sub.user_id)
         usr = db.query(User).filter(User.id == sub.user_id).first()
-        emp = db.query(Employee).filter(Employee.user_id == sub.user_id).first() if usr else None
+
+        # Takım Lideri sadece kendi takımını görür
+        if leader_team_id is not None:
+            if not emp or emp.team_id != leader_team_id:
+                continue
 
         if emp:
             emp_name = f"{emp.first_name} {emp.last_name}"
-            job_title = emp.job_title or "Personel"
+            job_title = getattr(emp, "position", None) or getattr(emp, "job_title", "Personel")
+            team_name = team_by_id.get(emp.team_id, "Genel Ekip")
         elif usr:
             emp_name = usr.username
             job_title = "Kullanıcı"
+            team_name = "Takımsız"
         else:
             emp_name = "Bilinmeyen Kullanıcı"
             job_title = "-"
+            team_name = "-"
 
-        total = sub.total_questions if (sub.total_questions and sub.total_questions > 0) else len(quiz.questions)
+        total = sub.total_questions if (sub.total_questions and sub.total_questions > 0) else len(quiz.questions or [])
         percentage = round((sub.score / total) * 100, 1) if total > 0 else 0
 
         submitted_date = "Tamamlandı"
@@ -148,8 +193,11 @@ def get_quiz_submissions(
 
         results.append({
             "id": sub.id,
+            "user_id": sub.user_id,
             "employee_name": emp_name,
             "username": usr.username if usr else "-",
+            "team_id": emp.team_id if emp else None,
+            "team_name": team_name,
             "job_title": job_title,
             "score": sub.score,
             "total_questions": total,
@@ -170,11 +218,14 @@ def submit_quiz(
 ):
     quiz = (
         db.query(Quiz)
-        .filter(Quiz.id == quiz_id, Quiz.company_id == current_user.company_id)
+        .filter(Quiz.id == quiz_id)
         .first()
     )
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz bulunamadı.")
+
+    if current_user.company_id and quiz.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Bu teste erişim izniniz yok.")
 
     existing = (
         db.query(QuizSubmission)
@@ -185,7 +236,8 @@ def submit_quiz(
         raise HTTPException(status_code=400, detail="Bu quiz zaten tamamlandı.")
 
     score = 0
-    for idx, ques in enumerate(quiz.questions):
+    questions = quiz.questions or []
+    for idx, ques in enumerate(questions):
         if idx < len(data.selected_answers):
             if data.selected_answers[idx] == ques.get("correct_index"):
                 score += 1
@@ -194,12 +246,12 @@ def submit_quiz(
         quiz_id=quiz_id,
         user_id=current_user.id,
         score=score,
-        total_questions=len(quiz.questions),
+        total_questions=len(questions),
         is_completed=True,
     )
     db.add(submission)
     db.commit()
-    return {"score": score, "total_questions": len(quiz.questions), "message": "Quiz başarıyla gönderildi."}
+    return {"score": score, "total_questions": len(questions), "message": "Quiz başarıyla gönderildi."}
 
 
 # ================= SHIFT & BREAK ENDPOINTS =================
@@ -207,14 +259,22 @@ def submit_quiz(
 def save_company_shift(
     data: ShiftSaveSchema,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_owner),
+    current_user: User = Depends(require_leader_manager_or_owner),
 ):
     today = data.shift_date or date.today().isoformat()
+    company_id = current_user.company_id
+
+    # Takım lideri kontrolü: Başka bir personelin vardiyasını giriyorsa o personel kendi takımında mı?
+    if current_user.role == UserRole.TAKIM_LIDERI.value and data.employee_id:
+        leader_emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
+        target_emp = db.query(Employee).filter(Employee.id == data.employee_id).first()
+        if not leader_emp or not target_emp or leader_emp.team_id != target_emp.team_id:
+            raise HTTPException(status_code=403, detail="Yalnızca kendi takımınızdaki personelin vardiyasını düzenleyebilirsiniz.")
 
     shift = (
         db.query(ShiftSchedule)
         .filter(
-            ShiftSchedule.company_id == current_user.company_id,
+            ShiftSchedule.company_id == company_id,
             ShiftSchedule.shift_date == today,
             ShiftSchedule.employee_id == data.employee_id
         )
@@ -223,7 +283,7 @@ def save_company_shift(
 
     if not shift:
         shift = ShiftSchedule(
-            company_id=current_user.company_id,
+            company_id=company_id,
             employee_id=data.employee_id,
             shift_date=today,
             start_time=data.start_time,
@@ -256,7 +316,6 @@ def get_today_shift(
     emp = db.query(Employee).filter(Employee.user_id == current_user.id).first()
 
     shift = None
-    # 1. Personele özel tanımlanmış vardiya var mı?
     if emp:
         shift = (
             db.query(ShiftSchedule)
@@ -268,14 +327,13 @@ def get_today_shift(
             .first()
         )
 
-    # 2. Personele özel yoksa şirketin genel vardiyasını al
     if not shift:
         shift = (
             db.query(ShiftSchedule)
             .filter(
                 ShiftSchedule.company_id == current_user.company_id,
                 ShiftSchedule.shift_date == today,
-                ShiftSchedule.employee_id == None
+                ShiftSchedule.employee_id.is_(None)
             )
             .first()
         )

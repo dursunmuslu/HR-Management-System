@@ -1,10 +1,13 @@
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     String,
-    UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -13,14 +16,6 @@ from app.database.database import Base
 
 class Team(Base):
     __tablename__ = "teams"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "department_id",
-            "name",
-            name="uq_team_department_name",
-        ),
-    )
 
     id = Column(
         Integer,
@@ -32,9 +27,20 @@ class Team(Base):
         Integer,
         ForeignKey(
             "departments.id",
-            ondelete="CASCADE",
+            ondelete="RESTRICT",
         ),
         nullable=False,
+        index=True,
+    )
+
+    # Takım Lideri (Employee tablosuna bağlanır)
+    team_leader_id = Column(
+        Integer,
+        ForeignKey(
+            "employees.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
         index=True,
     )
 
@@ -43,15 +49,24 @@ class Team(Base):
         nullable=False,
     )
 
-    description = Column(
-        String(500),
-        nullable=True,
-    )
-
     is_active = Column(
         Boolean,
         nullable=False,
         default=True,
+        server_default="true",
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     department = relationship(
@@ -59,7 +74,16 @@ class Team(Base):
         back_populates="teams",
     )
 
+    # Takımın personelleri
     employees = relationship(
         "Employee",
         back_populates="team",
+        foreign_keys="Employee.team_id",
+    )
+
+    # Takımın lideri (Employee objesi)
+    team_leader = relationship(
+        "Employee",
+        foreign_keys=[team_leader_id],
+        uselist=False,
     )
