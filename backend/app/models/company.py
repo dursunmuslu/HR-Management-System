@@ -55,6 +55,44 @@ class Company(Base):
         index=True,
     )
 
+    # ============================================================
+    # ŞİRKET MODÜL ERİŞİM AYARLARI
+    # ============================================================
+    is_announcements_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    is_quizzes_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    is_shifts_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    is_leaves_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    is_timesheets_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
     suspended_at = Column(
         DateTime(timezone=True),
         nullable=True,

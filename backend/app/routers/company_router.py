@@ -32,14 +32,13 @@ def get_my_company_settings(
             return CompanyModuleSettingsSchema()
 
         return CompanyModuleSettingsSchema(
-            is_announcements_enabled=getattr(comp, "is_announcements_enabled", True) if getattr(comp, "is_announcements_enabled", None) is not None else True,
-            is_quizzes_enabled=getattr(comp, "is_quizzes_enabled", True) if getattr(comp, "is_quizzes_enabled", None) is not None else True,
-            is_shifts_enabled=getattr(comp, "is_shifts_enabled", True) if getattr(comp, "is_shifts_enabled", None) is not None else True,
-            is_leaves_enabled=getattr(comp, "is_leaves_enabled", True) if getattr(comp, "is_leaves_enabled", None) is not None else True,
-            is_timesheets_enabled=getattr(comp, "is_timesheets_enabled", True) if getattr(comp, "is_timesheets_enabled", None) is not None else True,
+            is_announcements_enabled=bool(comp.is_announcements_enabled) if comp.is_announcements_enabled is not None else True,
+            is_quizzes_enabled=bool(comp.is_quizzes_enabled) if comp.is_quizzes_enabled is not None else True,
+            is_shifts_enabled=bool(comp.is_shifts_enabled) if comp.is_shifts_enabled is not None else True,
+            is_leaves_enabled=bool(comp.is_leaves_enabled) if comp.is_leaves_enabled is not None else True,
+            is_timesheets_enabled=bool(comp.is_timesheets_enabled) if comp.is_timesheets_enabled is not None else True,
         )
     except Exception:
-        # DB katmanında kolon henüz güncellenmemişse bile frontend patlamasın
         return CompanyModuleSettingsSchema()
 
 
@@ -57,27 +56,23 @@ def update_my_company_settings(
         raise HTTPException(status_code=404, detail="Şirket bulunamadı.")
 
     try:
-        if hasattr(comp, "is_announcements_enabled"):
-            comp.is_announcements_enabled = payload.is_announcements_enabled
-        if hasattr(comp, "is_quizzes_enabled"):
-            comp.is_quizzes_enabled = payload.is_quizzes_enabled
-        if hasattr(comp, "is_shifts_enabled"):
-            comp.is_shifts_enabled = payload.is_shifts_enabled
-        if hasattr(comp, "is_leaves_enabled"):
-            comp.is_leaves_enabled = payload.is_leaves_enabled
-        if hasattr(comp, "is_timesheets_enabled"):
-            comp.is_timesheets_enabled = payload.is_timesheets_enabled
+        comp.is_announcements_enabled = payload.is_announcements_enabled
+        comp.is_quizzes_enabled = payload.is_quizzes_enabled
+        comp.is_shifts_enabled = payload.is_shifts_enabled
+        comp.is_leaves_enabled = payload.is_leaves_enabled
+        comp.is_timesheets_enabled = payload.is_timesheets_enabled
 
+        db.add(comp)
         db.commit()
         db.refresh(comp)
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ayarlar güncellenirken hata oluştu: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ayarlar kaydedilirken hata oluştu: {str(e)}")
 
     return CompanyModuleSettingsSchema(
-        is_announcements_enabled=getattr(comp, "is_announcements_enabled", True),
-        is_quizzes_enabled=getattr(comp, "is_quizzes_enabled", True),
-        is_shifts_enabled=getattr(comp, "is_shifts_enabled", True),
-        is_leaves_enabled=getattr(comp, "is_leaves_enabled", True),
-        is_timesheets_enabled=getattr(comp, "is_timesheets_enabled", True),
+        is_announcements_enabled=comp.is_announcements_enabled,
+        is_quizzes_enabled=comp.is_quizzes_enabled,
+        is_shifts_enabled=comp.is_shifts_enabled,
+        is_leaves_enabled=comp.is_leaves_enabled,
+        is_timesheets_enabled=comp.is_timesheets_enabled,
     )
