@@ -1,609 +1,273 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse, HttpClient } from '@angular/common/http';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
-import {
-  HttpErrorResponse
-} from '@angular/common/http';
+import { Employee, EmployeeRole } from '../../../core/models/employee.model';
+import { EmployeeService } from '../../../core/services/employee.service';
 
-import {
-  Component,
-  OnInit,
-  inject
-} from '@angular/core';
-
-import {
-  FormsModule
-} from '@angular/forms';
-
-import {
-  RouterLink
-} from '@angular/router';
-
-import {
-  finalize
-} from 'rxjs';
-
-import {
-  Employee,
-  EmployeeRole
-} from '../../../core/models/employee.model';
-
-import {
-  EmployeeService
-} from '../../../core/services/employee.service';
-
-
-type AssignableEmployeeRole =
-  | 'PERSONEL'
-  | 'YONETICI';
-
+type AssignableEmployeeRole = 'PERSONEL' | 'YONETICI';
 
 @Component({
   selector: 'app-employee-list',
-
   standalone: true,
-
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterLink
-  ],
-
-  templateUrl:
-    './employee-list.component.html',
-
-  styleUrl:
-    './employee-list.component.scss'
+  imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './employee-list.component.html',
+  styleUrl: './employee-list.component.scss'
 })
-export class EmployeeListComponent
-  implements OnInit {
+export class EmployeeListComponent implements OnInit {
+  private readonly employeeService = inject(EmployeeService);
+  private readonly http = inject(HttpClient);
 
-  private readonly employeeService =
-    inject(EmployeeService);
-
+  readonly bulkUploadUrl = 'https://hr-management-api-6rpx.onrender.com/bulk/upload-employees';
 
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
 
   searchText = '';
-
-  selectedRole:
-    | 'TUMU'
-    | AssignableEmployeeRole = 'TUMU';
+  selectedRole: 'TUMU' | AssignableEmployeeRole = 'TUMU';
 
   isLoading = true;
-
-  deletingEmployeeId:
-    number | null = null;
-
-  updatingRoleEmployeeId:
-    number | null = null;
+  isUploadingExcel = false;
+  deletingEmployeeId: number | null = null;
+  updatingRoleEmployeeId: number | null = null;
 
   errorMessage = '';
   successMessage = '';
-
 
   ngOnInit(): void {
     this.loadEmployees();
   }
 
-
   get totalCount(): number {
     return this.employees.length;
   }
 
-
   get managerCount(): number {
-    return this.employees.filter(
-      employee =>
-        this.getEmployeeRole(employee) ===
-        'YONETICI'
-    ).length;
+    return this.employees.filter(employee => this.getEmployeeRole(employee) === 'YONETICI').length;
   }
-
 
   get personnelCount(): number {
-    return this.employees.filter(
-      employee =>
-        this.getEmployeeRole(employee) ===
-        'PERSONEL'
-    ).length;
+    return this.employees.filter(employee => this.getEmployeeRole(employee) === 'PERSONEL').length;
   }
-
 
   get activeCount(): number {
-    return this.employees.filter(
-      employee =>
-        employee.is_active !== false
-    ).length;
+    return this.employees.filter(employee => employee.is_active !== false).length;
   }
-
 
   loadEmployees(): void {
     this.isLoading = true;
-
     this.errorMessage = '';
     this.successMessage = '';
 
     this.employeeService
       .getEmployees()
-      .pipe(
-        finalize(() => {
-          this.isLoading = false;
-        })
-      )
+      .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: employees => {
-          this.employees =
-            Array.isArray(employees)
-              ? employees
-              : [];
-
+          this.employees = Array.isArray(employees) ? employees : [];
           this.applyFilters();
         },
-
-        error: (
-          error: HttpErrorResponse
-        ) => {
+        error: (error: HttpErrorResponse) => {
           this.employees = [];
           this.filteredEmployees = [];
-
-          this.errorMessage =
-            this.resolveErrorMessage(
-              error
-            );
+          this.errorMessage = this.resolveErrorMessage(error);
         }
       });
   }
 
+  onExcelSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
 
-  applyFilters(): void {
-    const search =
-      this.searchText
-        .trim()
-        .toLocaleLowerCase(
-          'tr-TR'
-        );
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
 
-    this.filteredEmployees =
-      this.employees.filter(
-        employee => {
-          const employeeRole =
-            this.getEmployeeRole(
-              employee
-            );
+    this.isUploadingExcel = true;
+    this.errorMessage = '';
+    this.successMessage = '';
 
-          const roleMatches =
-            this.selectedRole ===
-              'TUMU' ||
-            employeeRole ===
-              this.selectedRole;
-
-          const searchableText = [
-            this.getFullName(employee),
-            employee.username ?? '',
-            employee.email ?? '',
-            employee.department ?? '',
-            employee.position ?? '',
-            employee.employee_number ?? '',
-            employee.tc_no ?? '',
-            this.getRoleLabel(
-              employeeRole
-            )
-          ]
-            .filter(
-              value =>
-                value.trim().length > 0
-            )
-            .join(' ')
-            .toLocaleLowerCase(
-              'tr-TR'
-            );
-
-          const searchMatches =
-            search.length === 0 ||
-            searchableText.includes(
-              search
-            );
-
-          return (
-            roleMatches &&
-            searchMatches
-          );
+    this.http.post<any>(this.bulkUploadUrl, formData)
+      .pipe(finalize(() => {
+        this.isUploadingExcel = false;
+        input.value = '';
+      }))
+      .subscribe({
+        next: (res) => {
+          this.successMessage = res.message || 'Excel başarıyla işlendi!';
+          this.loadEmployees();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.errorMessage = 'Excel Yükleme Hatası: ' + (err.error?.detail || err.message);
         }
-      );
+      });
   }
 
+  applyFilters(): void {
+    const search = this.searchText.trim().toLocaleLowerCase('tr-TR');
+
+    this.filteredEmployees = this.employees.filter(employee => {
+      const employeeRole = this.getEmployeeRole(employee);
+      const roleMatches = this.selectedRole === 'TUMU' || employeeRole === this.selectedRole;
+
+      const searchableText = [
+        this.getFullName(employee),
+        employee.username ?? '',
+        employee.email ?? '',
+        employee.department ?? '',
+        employee.position ?? '',
+        employee.employee_number ?? '',
+        employee.tc_no ?? '',
+        this.getRoleLabel(employeeRole)
+      ]
+        .filter(value => value.trim().length > 0)
+        .join(' ')
+        .toLocaleLowerCase('tr-TR');
+
+      const searchMatches = search.length === 0 || searchableText.includes(search);
+      return roleMatches && searchMatches;
+    });
+  }
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedRole = 'TUMU';
-
     this.applyFilters();
   }
 
+  changeRole(employee: Employee, event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const previousRole = this.getEmployeeRole(employee);
+    const selectedValue = selectElement.value;
 
-  changeRole(
-    employee: Employee,
-    event: Event
-  ): void {
-    const selectElement =
-      event.target as HTMLSelectElement;
-
-    const previousRole =
-      this.getEmployeeRole(
-        employee
-      );
-
-    const selectedValue =
-      selectElement.value;
-
-    if (
-      !this.isAssignableRole(
-        selectedValue
-      )
-    ) {
-      selectElement.value =
-        previousRole;
-
-      this.errorMessage =
-        'Geçersiz kullanıcı rolü seçildi.';
-
+    if (!this.isAssignableRole(selectedValue)) {
+      selectElement.value = previousRole;
+      this.errorMessage = 'Geçersiz kullanıcı rolü seçildi.';
       return;
     }
 
-    const newRole:
-      AssignableEmployeeRole =
-        selectedValue;
+    const newRole: AssignableEmployeeRole = selectedValue;
+    if (newRole === previousRole) return;
 
-    if (newRole === previousRole) {
-      return;
-    }
+    const employeeName = this.getFullName(employee);
+    const newRoleLabel = this.getRoleLabel(newRole);
 
-    const employeeName =
-      this.getFullName(
-        employee
-      );
-
-    const newRoleLabel =
-      this.getRoleLabel(
-        newRole
-      );
-
-    const confirmed =
-      window.confirm(
-        `${employeeName} isimli kullanıcının rolü "${newRoleLabel}" olarak değiştirilsin mi?`
-      );
-
+    const confirmed = window.confirm(`${employeeName} isimli kullanıcının rolü "${newRoleLabel}" olarak değiştirilsin mi?`);
     if (!confirmed) {
-      selectElement.value =
-        previousRole;
-
+      selectElement.value = previousRole;
       return;
     }
 
     this.errorMessage = '';
     this.successMessage = '';
-
-    this.updatingRoleEmployeeId =
-      employee.id;
+    this.updatingRoleEmployeeId = employee.id;
 
     this.employeeService
-      .updateUserRole(
-        employee.user_id,
-        newRole
-      )
-      .pipe(
-        finalize(() => {
-          this.updatingRoleEmployeeId =
-            null;
-        })
-      )
+      .updateUserRole(employee.user_id, newRole)
+      .pipe(finalize(() => { this.updatingRoleEmployeeId = null; }))
       .subscribe({
         next: updatedUser => {
-          employee.role =
-            updatedUser.role;
-
-          employee.username =
-            updatedUser.username;
-
-          employee.is_active =
-            updatedUser.is_active;
-
-          employee.must_change_password =
-            updatedUser
-              .must_change_password;
+          employee.role = updatedUser.role;
+          employee.username = updatedUser.username;
+          employee.is_active = updatedUser.is_active;
+          employee.must_change_password = updatedUser.must_change_password;
 
           if (employee.user) {
             employee.user = {
               ...employee.user,
-
-              id:
-                updatedUser.id,
-
-              company_id:
-                updatedUser.company_id,
-
-              username:
-                updatedUser.username,
-
-              role:
-                updatedUser.role,
-
-              is_active:
-                updatedUser.is_active,
-
-              must_change_password:
-                updatedUser
-                  .must_change_password
+              id: updatedUser.id,
+              company_id: updatedUser.company_id,
+              username: updatedUser.username,
+              role: updatedUser.role,
+              is_active: updatedUser.is_active,
+              must_change_password: updatedUser.must_change_password
             };
           }
 
           this.applyFilters();
-
-          this.successMessage =
-            `${employeeName} kullanıcısının rolü ${this.getRoleLabel(updatedUser.role)} olarak güncellendi.`;
+          this.successMessage = `${employeeName} kullanıcısının rolü ${this.getRoleLabel(updatedUser.role)} olarak güncellendi.`;
         },
-
-        error: (
-          error: HttpErrorResponse
-        ) => {
-          selectElement.value =
-            previousRole;
-
-          this.errorMessage =
-            this.resolveErrorMessage(
-              error
-            );
+        error: (error: HttpErrorResponse) => {
+          selectElement.value = previousRole;
+          this.errorMessage = this.resolveErrorMessage(error);
         }
       });
   }
 
-
-  deleteEmployee(
-    employee: Employee
-  ): void {
-    const employeeName =
-      this.getFullName(
-        employee
-      );
-
-    const confirmed =
-      window.confirm(
-        `${employeeName} isimli personeli silmek istediğinizden emin misiniz?`
-      );
-
-    if (!confirmed) {
-      return;
-    }
+  deleteEmployee(employee: Employee): void {
+    const employeeName = this.getFullName(employee);
+    const confirmed = window.confirm(`${employeeName} isimli personeli silmek istediğinizden emin misiniz?`);
+    if (!confirmed) return;
 
     this.errorMessage = '';
     this.successMessage = '';
-
-    this.deletingEmployeeId =
-      employee.id;
+    this.deletingEmployeeId = employee.id;
 
     this.employeeService
-      .deleteEmployee(
-        employee.id
-      )
-      .pipe(
-        finalize(() => {
-          this.deletingEmployeeId =
-            null;
-        })
-      )
+      .deleteEmployee(employee.id)
+      .pipe(finalize(() => { this.deletingEmployeeId = null; }))
       .subscribe({
         next: () => {
-          this.employees =
-            this.employees.filter(
-              item =>
-                item.id !==
-                employee.id
-            );
-
+          this.employees = this.employees.filter(item => item.id !== employee.id);
           this.applyFilters();
-
-          this.successMessage =
-            'Personel kaydı başarıyla silindi.';
+          this.successMessage = 'Personel kaydı başarıyla silindi.';
         },
-
-        error: (
-          error: HttpErrorResponse
-        ) => {
-          this.errorMessage =
-            this.resolveErrorMessage(
-              error
-            );
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage = this.resolveErrorMessage(error);
         }
       });
   }
 
-
-  getEmployeeRole(
-    employee: Employee
-  ): AssignableEmployeeRole {
-    const role =
-      employee.role ??
-      employee.user?.role;
-
-    return role === 'YONETICI'
-      ? 'YONETICI'
-      : 'PERSONEL';
+  getEmployeeRole(employee: Employee): AssignableEmployeeRole {
+    const role = employee.role ?? employee.user?.role;
+    return role === 'YONETICI' ? 'YONETICI' : 'PERSONEL';
   }
 
-
-  getFullName(
-    employee: Employee
-  ): string {
-    if (
-      typeof employee.full_name ===
-        'string' &&
-      employee.full_name.trim()
-    ) {
-      return (
-        employee.full_name.trim()
-      );
+  getFullName(employee: Employee): string {
+    if (typeof employee.full_name === 'string' && employee.full_name.trim()) {
+      return employee.full_name.trim();
     }
 
-    const fullName = [
-      employee.first_name ?? '',
-      employee.last_name ?? ''
-    ]
-      .filter(
-        value =>
-          value.trim().length > 0
-      )
+    const fullName = [employee.first_name ?? '', employee.last_name ?? '']
+      .filter(value => value.trim().length > 0)
       .join(' ')
       .trim();
 
-    return (
-      fullName ||
-      employee.username ||
-      employee.employee_number ||
-      `Personel #${employee.id}`
-    );
+    return fullName || employee.username || employee.employee_number || `Personel #${employee.id}`;
   }
 
-
-  getInitials(
-    employee: Employee
-  ): string {
-    return this.getFullName(
-      employee
-    )
+  getInitials(employee: Employee): string {
+    return this.getFullName(employee)
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
-      .map(
-        part =>
-          part.charAt(0)
-      )
+      .map(part => part.charAt(0))
       .join('')
-      .toLocaleUpperCase(
-        'tr-TR'
-      );
+      .toLocaleUpperCase('tr-TR');
   }
 
-
-  getRoleLabel(
-    role:
-      | EmployeeRole
-      | string
-      | null
-      | undefined
-  ): string {
-    if (role === 'YONETICI') {
-      return 'Yönetici';
-    }
-
-    if (role === 'PERSONEL') {
-      return 'Personel';
-    }
-
-    if (
-      role === 'PLATFORM_OWNER'
-    ) {
-      return 'Sistem Sahibi';
-    }
-
+  getRoleLabel(role: EmployeeRole | string | null | undefined): string {
+    if (role === 'YONETICI') return 'Yönetici';
+    if (role === 'PERSONEL') return 'Personel';
+    if (role === 'TAKIM_LIDERI') return 'Takım Lideri';
+    if (role === 'PLATFORM_OWNER') return 'Sistem Sahibi';
     return 'Belirtilmemiş';
   }
 
-
-  getLeaveBalance(
-    employee: Employee
-  ): number {
-    return (
-      employee
-        .remaining_annual_leave ??
-      0
-    );
+  getLeaveBalance(employee: Employee): number {
+    return employee.remaining_annual_leave ?? 0;
   }
 
-
-  private isAssignableRole(
-    value: string
-  ): value is AssignableEmployeeRole {
-    return (
-      value === 'PERSONEL' ||
-      value === 'YONETICI'
-    );
+  private isAssignableRole(value: string): value is AssignableEmployeeRole {
+    return value === 'PERSONEL' || value === 'YONETICI';
   }
 
-
-  private resolveErrorMessage(
-    error: HttpErrorResponse
-  ): string {
-    if (error.status === 0) {
-      return (
-        'Sunucuya bağlanılamadı. ' +
-        'Backend servisinin çalıştığını ' +
-        'kontrol edin.'
-      );
-    }
-
-    if (error.status === 400) {
-      return (
-        typeof error.error?.detail ===
-          'string'
-          ? error.error.detail
-          : 'Bu işlem gerçekleştirilemedi.'
-      );
-    }
-
-    if (error.status === 401) {
-      return (
-        'Oturum süreniz dolmuş olabilir. ' +
-        'Tekrar giriş yapın.'
-      );
-    }
-
-    if (error.status === 403) {
-      return (
-        typeof error.error?.detail ===
-          'string'
-          ? error.error.detail
-          : 'Bu işlem için yönetici yetkisi gereklidir.'
-      );
-    }
-
-    if (error.status === 404) {
-      return (
-        typeof error.error?.detail ===
-          'string'
-          ? error.error.detail
-          : 'Kullanıcı veya personel kaydı bulunamadı.'
-      );
-    }
-
-    if (error.status === 409) {
-      return (
-        typeof error.error?.detail ===
-          'string'
-          ? error.error.detail
-          : 'İşlem mevcut kayıtlarla çakıştı.'
-      );
-    }
-
-    if (error.status === 422) {
-      return (
-        typeof error.error?.detail ===
-          'string'
-          ? error.error.detail
-          : 'Gönderilen rol veya personel bilgileri geçersiz.'
-      );
-    }
-
-    if (
-      typeof error.error?.detail ===
-        'string'
-    ) {
-      return error.error.detail;
-    }
-
-    return (
-      'Personel işlemi sırasında ' +
-      'beklenmeyen bir hata oluştu.'
-    );
+  private resolveErrorMessage(error: HttpErrorResponse): string {
+    if (error.status === 0) return 'Sunucuya bağlanılamadı. Backend servisinin çalıştığını kontrol edin.';
+    if (typeof error.error?.detail === 'string') return error.error.detail;
+    return 'Personel işlemi sırasında beklenmeyen bir hata oluştu.';
   }
 }

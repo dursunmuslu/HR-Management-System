@@ -1,25 +1,30 @@
 <section class="employees-page">
   <header class="page-header">
     <div>
-      <p class="page-eyebrow">
-        Yönetici İşlemleri
-      </p>
-
+      <p class="page-eyebrow">Yönetici İşlemleri</p>
       <h1>Personeller</h1>
-
-      <p>
-        Sisteme kayıtlı personelleri görüntüleyebilir,
-        filtreleyebilir ve yönetebilirsin.
-      </p>
+      <p>Sisteme kayıtlı personelleri görüntüleyebilir, Excel ile toplu yükleyebilir ve yönetebilirsin.</p>
     </div>
 
-    <a
-      class="primary-action"
-      routerLink="/employees/create"
-    >
-      <span>＋</span>
-      Personel ekle
-    </a>
+    <div class="header-action-group" style="display: flex; gap: 10px; align-items: center;">
+      <!-- Excel Butonu -->
+      <input type="file" #excelInput (change)="onExcelSelected($event)" accept=".xlsx,.csv" style="display: none" />
+      <button
+        type="button"
+        class="primary-action"
+        style="background: linear-gradient(135deg, #059669, #10b981); border: 0; cursor: pointer;"
+        [disabled]="isUploadingExcel"
+        (click)="excelInput.click()"
+      >
+        <span>📊</span>
+        {{ isUploadingExcel ? 'Yükleniyor...' : 'Excel ile Toplu Yükle' }}
+      </button>
+
+      <a class="primary-action" routerLink="/employees/create">
+        <span>＋</span>
+        Personel ekle
+      </a>
+    </div>
   </header>
 
   @if (successMessage) {
@@ -35,22 +40,13 @@
         <strong>İşlem tamamlanamadı</strong>
         <p>{{ errorMessage }}</p>
       </div>
-
-      <button
-        type="button"
-        (click)="loadEmployees()"
-      >
-        Tekrar dene
-      </button>
+      <button type="button" (click)="loadEmployees()">Tekrar dene</button>
     </div>
   }
 
   <div class="summary-grid">
     <article>
-      <span class="summary-icon total">
-        ♟
-      </span>
-
+      <span class="summary-icon total">♟</span>
       <div>
         <p>Toplam personel</p>
         <strong>{{ totalCount }}</strong>
@@ -58,10 +54,7 @@
     </article>
 
     <article>
-      <span class="summary-icon active">
-        ✓
-      </span>
-
+      <span class="summary-icon active">✓</span>
       <div>
         <p>Aktif personel</p>
         <strong>{{ activeCount }}</strong>
@@ -69,10 +62,7 @@
     </article>
 
     <article>
-      <span class="summary-icon personnel">
-        ●
-      </span>
-
+      <span class="summary-icon personnel">●</span>
       <div>
         <p>Personel</p>
         <strong>{{ personnelCount }}</strong>
@@ -80,10 +70,7 @@
     </article>
 
     <article>
-      <span class="summary-icon manager">
-        ◆
-      </span>
-
+      <span class="summary-icon manager">◆</span>
       <div>
         <p>Yönetici</p>
         <strong>{{ managerCount }}</strong>
@@ -95,7 +82,6 @@
     <div class="toolbar">
       <div class="search-box">
         <span>⌕</span>
-
         <input
           type="search"
           [(ngModel)]="searchText"
@@ -104,30 +90,16 @@
         >
       </div>
 
-      <select
-        [(ngModel)]="selectedRole"
-        (ngModelChange)="applyFilters()"
-      >
-        <option value="TUMU">
-          Tüm roller
-        </option>
-
-        <option value="PERSONEL">
-          Personel
-        </option>
-
-        <option value="YONETICI">
-          Yönetici
-        </option>
+      <select [(ngModel)]="selectedRole" (ngModelChange)="applyFilters()">
+        <option value="TUMU">Tüm roller</option>
+        <option value="PERSONEL">Personel</option>
+        <option value="YONETICI">Yönetici</option>
       </select>
     </div>
 
     @if (isLoading) {
       <div class="loading-list">
-        @for (
-          item of [1, 2, 3, 4];
-          track item
-        ) {
+        @for (item of [1, 2, 3, 4]; track item) {
           <div class="loading-row">
             <span></span>
             <span></span>
@@ -135,22 +107,12 @@
           </div>
         }
       </div>
-    } @else if (
-      filteredEmployees.length === 0
-    ) {
+    } @else if (filteredEmployees.length === 0) {
       <div class="empty-state">
         <span>♟</span>
-
         <h2>Personel bulunamadı</h2>
-
-        <p>
-          Arama veya filtre kriterlerine uygun kayıt
-          bulunmuyor.
-        </p>
-
-        <a routerLink="/employees/create">
-          Yeni personel ekle
-        </a>
+        <p>Arama veya filtre kriterlerine uygun kayıt bulunmuyor.</p>
+        <a routerLink="/employees/create">Yeni personel ekle</a>
       </div>
     } @else {
       <div class="desktop-table">
@@ -163,101 +125,52 @@
               <th>Rol</th>
               <th>İzin bakiyesi</th>
               <th>Durum</th>
-
-              <th class="actions-heading">
-                İşlem
-              </th>
+              <th class="actions-heading">İşlem</th>
             </tr>
           </thead>
 
           <tbody>
-            @for (
-              employee of filteredEmployees;
-              track employee.id
-            ) {
+            @for (employee of filteredEmployees; track employee.id) {
               <tr>
                 <td>
                   <div class="employee-cell">
-                    <span class="avatar">
-                      {{ getInitials(employee) }}
-                    </span>
-
+                    <span class="avatar">{{ getInitials(employee) }}</span>
                     <div>
-                      <strong>
-                        {{ getFullName(employee) }}
-                      </strong>
-
-                      <small>
-                        {{ employee.email }}
-                      </small>
-
+                      <strong>{{ getFullName(employee) }}</strong>
+                      <small>{{ employee.email }}</small>
                       @if (employee.username) {
-                        <small>
-                          &#64;{{ employee.username }}
-                        </small>
+                        <small>&#64;{{ employee.username }}</small>
                       }
                     </div>
                   </div>
                 </td>
 
-                <td>
-                  {{ employee.department || '-' }}
-                </td>
-
-                <td>
-                  {{ employee.position || '-' }}
-                </td>
+                <td>{{ employee.department || '-' }}</td>
+                <td>{{ employee.position || '-' }}</td>
 
                 <td>
                   <select
                     class="role-select"
                     [value]="getEmployeeRole(employee)"
-                    [disabled]="
-                      updatingRoleEmployeeId ===
-                      employee.id
-                    "
-                    (change)="
-                      changeRole(employee, $event)
-                    "
+                    [disabled]="updatingRoleEmployeeId === employee.id"
+                    (change)="changeRole(employee, $event)"
                   >
-                    <option value="PERSONEL">
-                      Personel
-                    </option>
-
-                    <option value="YONETICI">
-                      Yönetici
-                    </option>
+                    <option value="PERSONEL">Personel</option>
+                    <option value="YONETICI">Yönetici</option>
                   </select>
 
-                  @if (
-                    updatingRoleEmployeeId ===
-                    employee.id
-                  ) {
-                    <small class="role-loading">
-                      Güncelleniyor...
-                    </small>
+                  @if (updatingRoleEmployeeId === employee.id) {
+                    <small class="role-loading">Güncelleniyor...</small>
                   }
                 </td>
 
                 <td>
-                  <strong class="leave-balance">
-                    {{ getLeaveBalance(employee) }}
-                    gün
-                  </strong>
+                  <strong class="leave-balance">{{ getLeaveBalance(employee) }} gün</strong>
                 </td>
 
                 <td>
-                  <span
-                    class="status-badge"
-                    [class.inactive]="
-                      employee.is_active === false
-                    "
-                  >
-                    {{
-                      employee.is_active === false
-                        ? 'Pasif'
-                        : 'Aktif'
-                    }}
+                  <span class="status-badge" [class.inactive]="employee.is_active === false">
+                    {{ employee.is_active === false ? 'Pasif' : 'Aktif' }}
                   </span>
                 </td>
 
@@ -265,155 +178,16 @@
                   <button
                     class="delete-button"
                     type="button"
-                    [disabled]="
-                      deletingEmployeeId ===
-                        employee.id ||
-                      updatingRoleEmployeeId ===
-                        employee.id
-                    "
+                    [disabled]="deletingEmployeeId === employee.id || updatingRoleEmployeeId === employee.id"
                     (click)="deleteEmployee(employee)"
                   >
-                    @if (
-                      deletingEmployeeId ===
-                      employee.id
-                    ) {
-                      Siliniyor...
-                    } @else {
-                      Sil
-                    }
+                    {{ deletingEmployeeId === employee.id ? 'Siliniyor...' : 'Sil' }}
                   </button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
-      </div>
-
-      <div class="mobile-list">
-        @for (
-          employee of filteredEmployees;
-          track employee.id
-        ) {
-          <article class="employee-card">
-            <div class="employee-card-header">
-              <div class="employee-cell">
-                <span class="avatar">
-                  {{ getInitials(employee) }}
-                </span>
-
-                <div>
-                  <strong>
-                    {{ getFullName(employee) }}
-                  </strong>
-
-                  <small>
-                    {{ employee.email }}
-                  </small>
-
-                  @if (employee.username) {
-                    <small>
-                      &#64;{{ employee.username }}
-                    </small>
-                  }
-                </div>
-              </div>
-
-              <span
-                class="status-badge"
-                [class.inactive]="
-                  employee.is_active === false
-                "
-              >
-                {{
-                  employee.is_active === false
-                    ? 'Pasif'
-                    : 'Aktif'
-                }}
-              </span>
-            </div>
-
-            <div class="employee-details">
-              <div>
-                <span>Departman</span>
-
-                <strong>
-                  {{ employee.department || '-' }}
-                </strong>
-              </div>
-
-              <div>
-                <span>Pozisyon</span>
-
-                <strong>
-                  {{ employee.position || '-' }}
-                </strong>
-              </div>
-
-              <div>
-                <span>Rol</span>
-
-                <select
-                  class="role-select"
-                  [value]="getEmployeeRole(employee)"
-                  [disabled]="
-                    updatingRoleEmployeeId ===
-                    employee.id
-                  "
-                  (change)="
-                    changeRole(employee, $event)
-                  "
-                >
-                  <option value="PERSONEL">
-                    Personel
-                  </option>
-
-                  <option value="YONETICI">
-                    Yönetici
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <span>İzin bakiyesi</span>
-
-                <strong>
-                  {{ getLeaveBalance(employee) }}
-                  gün
-                </strong>
-              </div>
-            </div>
-
-            @if (
-              updatingRoleEmployeeId ===
-              employee.id
-            ) {
-              <small class="role-loading">
-                Rol güncelleniyor...
-              </small>
-            }
-
-            <button
-              class="mobile-delete-button"
-              type="button"
-              [disabled]="
-                deletingEmployeeId ===
-                  employee.id ||
-                updatingRoleEmployeeId ===
-                  employee.id
-              "
-              (click)="deleteEmployee(employee)"
-            >
-              @if (
-                deletingEmployeeId ===
-                employee.id
-              ) {
-                Siliniyor...
-              } @else {
-                Personeli sil
-              }
-            </button>
-          </article>
-        }
       </div>
     }
   </section>
