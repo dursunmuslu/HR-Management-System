@@ -1,118 +1,121 @@
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 
-import {
-  Component,
-  inject
-} from '@angular/core';
-
-import {
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet
-} from '@angular/router';
-
-import {
-  AuthService
-} from '../../core/services/auth.service';
-
+export interface CompanyModuleSettings {
+  is_announcements_enabled: boolean;
+  is_quizzes_enabled: boolean;
+  is_shifts_enabled: boolean;
+  is_leaves_enabled: boolean;
+  is_timesheets_enabled: boolean;
+}
 
 @Component({
   selector: 'app-main-layout',
-
   standalone: true,
-
   imports: [
     CommonModule,
     RouterLink,
     RouterLinkActive,
     RouterOutlet
   ],
-
-  templateUrl:
-    './main-layout.component.html',
-
-  styleUrl:
-    './main-layout.component.scss'
+  templateUrl: './main-layout.component.html',
+  styleUrl: './main-layout.component.scss'
 })
-export class MainLayoutComponent {
+export class MainLayoutComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
 
-  private readonly authService =
-    inject(AuthService);
+  readonly settingsApiUrl = 'https://hr-management-api-6rpx.onrender.com/companies/my-settings';
 
   sidebarOpen = false;
 
+  moduleSettings: CompanyModuleSettings = {
+    is_announcements_enabled: true,
+    is_quizzes_enabled: true,
+    is_shifts_enabled: true,
+    is_leaves_enabled: true,
+    is_timesheets_enabled: true
+  };
+
+  ngOnInit(): void {
+    if (!this.isPlatformOwner) {
+      this.loadSettings();
+    }
+  }
+
+  loadSettings(): void {
+    this.http.get<CompanyModuleSettings>(this.settingsApiUrl).subscribe({
+      next: (settings: CompanyModuleSettings) => {
+        if (settings) {
+          this.moduleSettings = { ...this.moduleSettings, ...settings };
+        }
+      },
+      error: () => {}
+    });
+  }
+
   get currentUser() {
-    return this.authService
-      .getStoredUser();
+    return this.authService.getStoredUser();
   }
 
   get isPlatformOwner(): boolean {
-    return (
-      this.currentUser?.role ===
-      'PLATFORM_OWNER'
-    );
+    return this.currentUser?.role === 'PLATFORM_OWNER';
   }
-    // main-layout.component.ts içinde bir yere ekle:
-  get showQuizzes(): boolean {
-    return localStorage.getItem('cfg_show_quizzes') !== 'false';
-  }
-
-  get showShifts(): boolean {
-    return localStorage.getItem('cfg_show_shifts') !== 'false';
-  }
-
-  get showAnnouncements(): boolean {
-    return localStorage.getItem('cfg_show_announcements') !== 'false';
-  }
-
 
   get isManager(): boolean {
-    return (
-      this.currentUser?.role ===
-      'YONETICI'
-    );
+    const role = this.currentUser?.role;
+    return role === 'YONETICI' || role === 'PLATFORM_OWNER';
+  }
+
+  get isTeamLeader(): boolean {
+    return this.currentUser?.role === 'TAKIM_LIDERI';
   }
 
   get isEmployee(): boolean {
-    return (
-      this.currentUser?.role ===
-      'PERSONEL'
-    );
+    return this.currentUser?.role === 'PERSONEL';
+  }
+
+  get showAnnouncements(): boolean {
+    return this.isManager || this.moduleSettings.is_announcements_enabled !== false;
+  }
+
+  get showQuizzes(): boolean {
+    return this.isManager || this.moduleSettings.is_quizzes_enabled !== false;
+  }
+
+  get showShifts(): boolean {
+    return this.isManager || this.moduleSettings.is_shifts_enabled !== false;
+  }
+
+  get showTimesheets(): boolean {
+    return this.isManager || this.moduleSettings.is_timesheets_enabled !== false;
+  }
+
+  get showLeaves(): boolean {
+    return this.isManager || this.moduleSettings.is_leaves_enabled !== false;
   }
 
   get homeRoute(): string {
-    return this.isPlatformOwner
-      ? '/platform'
-      : '/dashboard';
+    return this.isPlatformOwner ? '/platform' : '/dashboard';
   }
 
   get displayName(): string {
-    return (
-      this.currentUser?.username ||
-      'Kullanıcı'
-    );
+    return this.currentUser?.username || 'Kullanıcı';
   }
 
   get roleLabel(): string {
-    if (this.isPlatformOwner) {
-      return 'Sistem Sahibi';
-    }
-
-    if (this.isManager) {
-      return 'Şirket Yöneticisi';
-    }
-
-    if (this.isEmployee) {
-      return 'Personel';
-    }
-
+    if (this.isPlatformOwner) return 'Sistem Sahibi';
+    if (this.isManager) return 'Şirket Yöneticisi';
+    if (this.isTeamLeader) return 'Takım Lideri';
+    if (this.isEmployee) return 'Personel';
     return 'Kullanıcı';
   }
 
   get applicationTitle(): string {
-    return this.isPlatformOwner
-      ? 'HR Platform Yönetimi'
-      : 'İnsan Kaynakları Yönetim Sistemi';
+    return this.isPlatformOwner ? 'HR Platform Yönetimi' : 'İnsan Kaynakları Yönetim Sistemi';
   }
 
   get applicationDescription(): string {
@@ -122,16 +125,11 @@ export class MainLayoutComponent {
   }
 
   get userInitial(): string {
-    return this.displayName
-      .charAt(0)
-      .toLocaleUpperCase(
-        'tr-TR'
-      );
+    return this.displayName.charAt(0).toLocaleUpperCase('tr-TR');
   }
 
   toggleSidebar(): void {
-    this.sidebarOpen =
-      !this.sidebarOpen;
+    this.sidebarOpen = !this.sidebarOpen;
   }
 
   closeSidebar(): void {

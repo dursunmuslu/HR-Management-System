@@ -1,0 +1,191 @@
+<div class="timesheet-page">
+  <!-- BAŞLIK & EXCEL YÜKLEME BUTONU -->
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">PERFORMANS VE OPERASYON TAKİBİ</span>
+      <h1>Puantaj & Anket Performansı</h1>
+      <p>
+        {{ isManagerOrTL ? 'Personellerin eksik/fazla login sürelerini ve müşteri anket puanlarını tek ekrandan yönetin.' : 'Aylık anket puanlarınızı, hedeflerinizi ve günlük login eksik/fazla sürelerinizi buradan takip edebilirsiniz.' }}
+      </p>
+    </div>
+
+    @if (isManagerOrTL) {
+      <div class="header-actions">
+        <input type="file" #excelInput (change)="onExcelSelected($event)" accept=".xlsx" style="display:none;" />
+        <button class="btn-upload" [disabled]="isUploading" (click)="excelInput.click()">
+          <span>📊</span>
+          {{ isUploading ? 'İşleniyor...' : 'Puantaj & Anket Exceli Yükle' }}
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (statusMessage) {
+    <div class="alert-info">{{ statusMessage }}</div>
+  }
+
+  <!-- VARDİYADAKİ GİBİ SEGMENTED SWITCHER (SEKME SEÇİCİ) -->
+  <div class="segment-container">
+    <div class="segment-switcher">
+      <button
+        type="button"
+        [class.active]="activeTab === 'TIMESHEETS'"
+        (click)="setTab('TIMESHEETS')"
+      >
+        <span>⏱️</span>
+        Login Süreleri & Puantaj
+      </button>
+
+      <button
+        type="button"
+        [class.active]="activeTab === 'SURVEYS'"
+        (click)="setTab('SURVEYS')"
+      >
+        <span>🎯</span>
+        Anket & Performans Puanları
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. SEKME: LOGİN SÜRELERİ -->
+  @if (activeTab === 'TIMESHEETS') {
+    <div class="stats-grid">
+      <div class="stat-card missing">
+        <div class="stat-icon">⚠️</div>
+        <div>
+          <span class="stat-label">Toplam Eksik Süre</span>
+          <strong class="stat-val text-red">{{ formatMinutes(totalMissingMinutes) }}</strong>
+        </div>
+      </div>
+
+      <div class="stat-card overtime">
+        <div class="stat-icon">⏱️</div>
+        <div>
+          <span class="stat-label">Toplam Fazla Mesai</span>
+          <strong class="stat-val text-green">+{{ formatMinutes(totalOvertimeMinutes) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      @if (isLoading) {
+        <div class="state-msg">Süre kayıtları yükleniyor...</div>
+      } @else if (timesheets.length === 0) {
+        <div class="state-msg">Kayıtlı login süresi bulunmuyor.</div>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              @if (isManagerOrTL) { <th>Personel</th> }
+              <th>Çalışma Tarihi</th>
+              <th>Hedef Süre</th>
+              <th>Gerçekleşen Login</th>
+              <th>Fark</th>
+              <th>Açıklama / Sebep</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of timesheets; track row.id) {
+              <tr>
+                @if (isManagerOrTL) {
+                  <td>
+                    <strong>{{ row.full_name }}</strong>
+                    <small class="block-tc">TC: {{ row.tc_no }}</small>
+                  </td>
+                }
+                <td>{{ row.work_date }}</td>
+                <td>{{ formatMinutes(row.expected_minutes) }}</td>
+                <td>{{ formatMinutes(row.actual_minutes) }}</td>
+                <td>
+                  @if (row.diff_minutes < 0) {
+                    <span class="badge badge-danger">-{{ formatMinutes(row.diff_minutes) }} Eksik</span>
+                  } @else if (row.diff_minutes > 0) {
+                    <span class="badge badge-success">+{{ formatMinutes(row.diff_minutes) }} Fazla</span>
+                  } @else {
+                    <span class="badge badge-neutral">Tam Süre</span>
+                  }
+                </td>
+                <td>{{ row.description || '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- 2. SEKME: ANKET & PERFORMANS PUANLARI -->
+  @if (activeTab === 'SURVEYS') {
+    <div class="stats-grid">
+      <div class="stat-card target">
+        <div class="stat-icon">🎯</div>
+        <div>
+          <span class="stat-label">Hedeflenen Puan</span>
+          <strong class="stat-val text-blue">{{ averageTargetScore }} Puan</strong>
+        </div>
+      </div>
+
+      <div class="stat-card actual">
+        <div class="stat-icon">⭐</div>
+        <div>
+          <span class="stat-label">Senin Gerçekleşen Puanın</span>
+          <strong class="stat-val" [class.text-green]="averageSurveyScore >= averageTargetScore" [class.text-amber]="averageSurveyScore < averageTargetScore">
+            {{ averageSurveyScore }} Puan
+          </strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      @if (isLoading) {
+        <div class="state-msg">Anket puanları yükleniyor...</div>
+      } @else if (surveys.length === 0) {
+        <div class="state-msg">Kayıtlı anket puanı bulunmuyor.</div>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              @if (isManagerOrTL) { <th>Personel</th> }
+              <th>Dönem</th>
+              <th>Değerlendirme Türü</th>
+              <th>Hedef Puan</th>
+              <th>Alınan Puan</th>
+              <th>Durum</th>
+              <th>Anket Adedi</th>
+              <th>Geri Bildirim / Not</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of surveys; track row.id) {
+              <tr>
+                @if (isManagerOrTL) {
+                  <td>
+                    <strong>{{ row.full_name }}</strong>
+                    <small class="block-tc">TC: {{ row.tc_no }}</small>
+                  </td>
+                }
+                <td><strong>{{ row.period_month }}</strong></td>
+                <td>{{ row.survey_type }}</td>
+                <td>{{ row.target_score }}</td>
+                <td>
+                  <strong [style.color]="row.actual_score >= row.target_score ? '#047857' : '#b91c1c'">
+                    {{ row.actual_score }}
+                  </strong>
+                </td>
+                <td>
+                  @if (row.actual_score >= row.target_score) {
+                    <span class="badge badge-success">✓ Hedef Aşıldı</span>
+                  } @else {
+                    <span class="badge badge-warning">⚠️ Geliştirilmeli</span>
+                  }
+                </td>
+                <td>{{ row.survey_count }} adet</td>
+                <td>{{ row.feedback_note || '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>

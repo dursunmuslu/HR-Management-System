@@ -8,7 +8,8 @@ import { finalize } from 'rxjs';
 import { Employee, EmployeeRole } from '../../../core/models/employee.model';
 import { EmployeeService } from '../../../core/services/employee.service';
 
-type AssignableEmployeeRole = 'PERSONEL' | 'YONETICI';
+// TAKIM_LIDERI eklendi!
+export type AssignableEmployeeRole = 'PERSONEL' | 'TAKIM_LIDERI' | 'YONETICI';
 
 @Component({
   selector: 'app-employee-list',
@@ -47,6 +48,10 @@ export class EmployeeListComponent implements OnInit {
 
   get managerCount(): number {
     return this.employees.filter(employee => this.getEmployeeRole(employee) === 'YONETICI').length;
+  }
+
+  get leaderCount(): number {
+    return this.employees.filter(employee => this.getEmployeeRole(employee) === 'TAKIM_LIDERI').length;
   }
 
   get personnelCount(): number {
@@ -97,11 +102,11 @@ export class EmployeeListComponent implements OnInit {
       }))
       .subscribe({
         next: (res) => {
-          this.successMessage = res.message || 'Excel başarıyla işlendi!';
+          this.successMessage = res.message || 'Excel başarıyla yüklendi!';
           this.loadEmployees();
         },
         error: (err: HttpErrorResponse) => {
-          this.errorMessage = 'Excel Yükleme Hatası: ' + (err.error?.detail || err.message);
+          this.errorMessage = 'Excel Hatası: ' + (err.error?.detail || err.message);
         }
       });
   }
@@ -118,6 +123,7 @@ export class EmployeeListComponent implements OnInit {
         employee.username ?? '',
         employee.email ?? '',
         employee.department ?? '',
+        employee.team?.name ?? (employee as any).team_name ?? '',
         employee.position ?? '',
         employee.employee_number ?? '',
         employee.tc_no ?? '',
@@ -155,7 +161,7 @@ export class EmployeeListComponent implements OnInit {
     const employeeName = this.getFullName(employee);
     const newRoleLabel = this.getRoleLabel(newRole);
 
-    const confirmed = window.confirm(`${employeeName} isimli kullanıcının rolü "${newRoleLabel}" olarak değiştirilsin mi?`);
+    const confirmed = window.confirm(`${employeeName} kullanıcısının rolü "${newRoleLabel}" olarak değiştirilsin mi?`);
     if (!confirmed) {
       selectElement.value = previousRole;
       return;
@@ -173,22 +179,13 @@ export class EmployeeListComponent implements OnInit {
           employee.role = updatedUser.role;
           employee.username = updatedUser.username;
           employee.is_active = updatedUser.is_active;
-          employee.must_change_password = updatedUser.must_change_password;
 
           if (employee.user) {
-            employee.user = {
-              ...employee.user,
-              id: updatedUser.id,
-              company_id: updatedUser.company_id,
-              username: updatedUser.username,
-              role: updatedUser.role,
-              is_active: updatedUser.is_active,
-              must_change_password: updatedUser.must_change_password
-            };
+            employee.user.role = updatedUser.role;
           }
 
           this.applyFilters();
-          this.successMessage = `${employeeName} kullanıcısının rolü ${this.getRoleLabel(updatedUser.role)} olarak güncellendi.`;
+          this.successMessage = `${employeeName} kullanıcısının rolü ${this.getRoleLabel(updatedUser.role)} yapıldı.`;
         },
         error: (error: HttpErrorResponse) => {
           selectElement.value = previousRole;
@@ -213,7 +210,7 @@ export class EmployeeListComponent implements OnInit {
         next: () => {
           this.employees = this.employees.filter(item => item.id !== employee.id);
           this.applyFilters();
-          this.successMessage = 'Personel kaydı başarıyla silindi.';
+          this.successMessage = 'Personel silindi.';
         },
         error: (error: HttpErrorResponse) => {
           this.errorMessage = this.resolveErrorMessage(error);
@@ -223,20 +220,21 @@ export class EmployeeListComponent implements OnInit {
 
   getEmployeeRole(employee: Employee): AssignableEmployeeRole {
     const role = employee.role ?? employee.user?.role;
-    return role === 'YONETICI' ? 'YONETICI' : 'PERSONEL';
+    if (role === 'YONETICI') return 'YONETICI';
+    if (role === 'TAKIM_LIDERI') return 'TAKIM_LIDERI';
+    return 'PERSONEL';
   }
 
   getFullName(employee: Employee): string {
     if (typeof employee.full_name === 'string' && employee.full_name.trim()) {
       return employee.full_name.trim();
     }
+    const fullName = [employee.first_name ?? '', employee.last_name ?? ''].filter(v => v.trim().length > 0).join(' ').trim();
+    return fullName || employee.username || `Personel #${employee.id}`;
+  }
 
-    const fullName = [employee.first_name ?? '', employee.last_name ?? '']
-      .filter(value => value.trim().length > 0)
-      .join(' ')
-      .trim();
-
-    return fullName || employee.username || employee.employee_number || `Personel #${employee.id}`;
+  getTeamName(employee: any): string {
+    return employee.team?.name || employee.team_name || 'Genel Ekip';
   }
 
   getInitials(employee: Employee): string {
@@ -249,11 +247,10 @@ export class EmployeeListComponent implements OnInit {
       .toLocaleUpperCase('tr-TR');
   }
 
-  getRoleLabel(role: EmployeeRole | string | null | undefined): string {
+  getRoleLabel(role: string | null | undefined): string {
     if (role === 'YONETICI') return 'Yönetici';
-    if (role === 'PERSONEL') return 'Personel';
     if (role === 'TAKIM_LIDERI') return 'Takım Lideri';
-    if (role === 'PLATFORM_OWNER') return 'Sistem Sahibi';
+    if (role === 'PERSONEL') return 'Personel';
     return 'Belirtilmemiş';
   }
 
@@ -262,12 +259,12 @@ export class EmployeeListComponent implements OnInit {
   }
 
   private isAssignableRole(value: string): value is AssignableEmployeeRole {
-    return value === 'PERSONEL' || value === 'YONETICI';
+    return value === 'PERSONEL' || value === 'TAKIM_LIDERI' || value === 'YONETICI';
   }
 
   private resolveErrorMessage(error: HttpErrorResponse): string {
-    if (error.status === 0) return 'Sunucuya bağlanılamadı. Backend servisinin çalıştığını kontrol edin.';
+    if (error.status === 0) return 'Sunucuya bağlanılamadı.';
     if (typeof error.error?.detail === 'string') return error.error.detail;
-    return 'Personel işlemi sırasında beklenmeyen bir hata oluştu.';
+    return 'Personel işlemi sırasında hata oluştu.';
   }
 }

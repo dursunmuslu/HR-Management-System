@@ -16,6 +16,7 @@ from app.models.team import Team
 from app.models.user import User
 from app.models.quiz_and_shift import Quiz, QuizSubmission, ShiftSchedule
 from app.models.announcement import Announcement
+from app.models.attendance_timesheet import AttendanceTimesheet, PerformanceSurveyScore
 
 from app.security.password import hash_password
 from app.security.user_role import UserRole
@@ -31,6 +32,7 @@ from app.routers.team_router import router as team_router
 from app.routers.quiz_shift_router import router as quiz_shift_router
 from app.routers.excel_upload_router import router as excel_upload_router
 from app.routers.announcement_router import router as announcement_router
+from app.routers.timesheet_router import router as timesheet_router
 
 
 def init_db():
@@ -153,6 +155,7 @@ app.include_router(dashboard_router)
 app.include_router(quiz_shift_router)
 app.include_router(excel_upload_router)
 app.include_router(announcement_router)
+app.include_router(timesheet_router)
 
 
 # ============================================================

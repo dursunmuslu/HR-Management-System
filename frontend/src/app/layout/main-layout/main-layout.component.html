@@ -1,12 +1,11 @@
 <div class="app-shell">
 
+  <!-- SOL MENÜ (SIDEBAR) -->
   <aside
     class="sidebar"
     [class.sidebar-open]="sidebarOpen"
   >
-
     <div class="sidebar-header">
-
       <a
         class="brand"
         [routerLink]="homeRoute"
@@ -43,14 +42,10 @@
       >
         ×
       </button>
-
     </div>
 
-
     <nav class="navigation">
-
       @if (isPlatformOwner) {
-
         <p class="navigation-title">
           Platform
         </p>
@@ -58,22 +53,13 @@
         <a
           routerLink="/platform"
           routerLinkActive="active"
-          [routerLinkActiveOptions]="{
-            exact: true
-          }"
+          [routerLinkActiveOptions]="{ exact: true }"
           (click)="closeSidebar()"
         >
-          <span class="menu-icon">
-            ◈
-          </span>
-
-          <span>
-            Platform Dashboard
-          </span>
+          <span class="menu-icon">◈</span>
+          <span>Platform Dashboard</span>
         </a>
-
       } @else {
-
         <p class="navigation-title">
           Genel
         </p>
@@ -81,102 +67,92 @@
         <a
           routerLink="/dashboard"
           routerLinkActive="active"
-          [routerLinkActiveOptions]="{
-            exact: true
-          }"
+          [routerLinkActiveOptions]="{ exact: true }"
           (click)="closeSidebar()"
         >
-          <span class="menu-icon">
-            ⌂
-          </span>
-
-          <span>
-            Dashboard
-          </span>
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
         </a>
 
-        <!-- ŞİRKET BİLGİ & OPERASYON (HER ZAMAN GÖRÜNÜR) -->
-        <p class="navigation-title">
-          Şirket & Operasyon
-        </p>
+        <!-- ŞİRKET BİLGİ & OPERASYON (MODÜL AYARLARINA GÖRE GİZLENİR / GÖRÜNÜR) -->
+        @if (showAnnouncements || showQuizzes || showShifts || showTimesheets) {
+          <p class="navigation-title">
+            Şirket & Operasyon
+          </p>
 
-        <a
-          routerLink="/announcements"
-          routerLinkActive="active"
-          (click)="closeSidebar()"
-        >
-          <span class="menu-icon">
-            📢
-          </span>
+          @if (showAnnouncements) {
+            <a
+              routerLink="/announcements"
+              routerLinkActive="active"
+              (click)="closeSidebar()"
+            >
+              <span class="menu-icon">📢</span>
+              <span>Duyurular</span>
+            </a>
+          }
 
-          <span>
-            Duyurular
-          </span>
-        </a>
+          @if (showQuizzes) {
+            <a
+              routerLink="/quizzes"
+              routerLinkActive="active"
+              (click)="closeSidebar()"
+            >
+              <span class="menu-icon">📝</span>
+              <span>Değerlendirme Quizleri</span>
+            </a>
+          }
 
-        <a
-          routerLink="/quizzes"
-          routerLinkActive="active"
-          (click)="closeSidebar()"
-        >
-          <span class="menu-icon">
-            📝
-          </span>
+          @if (showShifts) {
+            <a
+              routerLink="/shifts"
+              routerLinkActive="active"
+              (click)="closeSidebar()"
+            >
+              <span class="menu-icon">⏰</span>
+              <span>Vardiya & Molalar</span>
+            </a>
+          }
 
-          <span>
-            Değerlendirme Quizleri
-          </span>
-        </a>
+          <!-- PUANTAJ VE ANKET PERFORMANSI (AYARA GÖRE KONTROLLÜ) -->
+          @if (showTimesheets) {
+            <a
+              routerLink="/timesheets"
+              routerLinkActive="active"
+              (click)="closeSidebar()"
+            >
+              <span class="menu-icon">⏱️</span>
+              <span>Puantaj & Anket Puanı</span>
+            </a>
+          }
+        }
 
-        <a
-          routerLink="/shifts"
-          routerLinkActive="active"
-          (click)="closeSidebar()"
-        >
-          <span class="menu-icon">
-            ⏰
-          </span>
+        <!-- İZİN YÖNETİMİ -->
+        @if (showLeaves) {
+          <p class="navigation-title">
+            İzin Yönetimi
+          </p>
 
-          <span>
-            Vardiya & Molalar
-          </span>
-        </a>
+          <a
+            routerLink="/leaves/my"
+            routerLinkActive="active"
+            (click)="closeSidebar()"
+          >
+            <span class="menu-icon">▤</span>
+            <span>İzin Taleplerim</span>
+          </a>
 
-        <p class="navigation-title">
-          İzin Yönetimi
-        </p>
+          <a
+            routerLink="/leaves/create"
+            routerLinkActive="active"
+            (click)="closeSidebar()"
+          >
+            <span class="menu-icon">＋</span>
+            <span>Yeni İzin Talebi</span>
+          </a>
+        }
 
-        <a
-          routerLink="/leaves/my"
-          routerLinkActive="active"
-          (click)="closeSidebar()"
-        >
-          <span class="menu-icon">
-            ▤
-          </span>
-
-          <span>
-            İzin Taleplerim
-          </span>
-        </a>
-
-        <a
-          routerLink="/leaves/create"
-          routerLinkActive="active"
-          (click)="closeSidebar()"
-        >
-          <span class="menu-icon">
-            ＋
-          </span>
-
-          <span>
-            Yeni İzin Talebi
-          </span>
-        </a>
-
-
+        <!-- YÖNETİCİ İŞLEMLERİ (Sadece Yöneticiler ve Platform Owner Görür) -->
         @if (isManager) {
-
           <p class="navigation-title">
             Yönetici İşlemleri
           </p>
@@ -186,13 +162,8 @@
             routerLinkActive="active"
             (click)="closeSidebar()"
           >
-            <span class="menu-icon">
-              ✓
-            </span>
-
-            <span>
-              İzin Onayları
-            </span>
+            <span class="menu-icon">✓</span>
+            <span>İzin Onayları</span>
           </a>
 
           <a
@@ -200,13 +171,8 @@
             routerLinkActive="active"
             (click)="closeSidebar()"
           >
-            <span class="menu-icon">
-              ▦
-            </span>
-
-            <span>
-              Organizasyon
-            </span>
+            <span class="menu-icon">▦</span>
+            <span>Organizasyon</span>
           </a>
 
           <a
@@ -214,13 +180,8 @@
             routerLinkActive="active"
             (click)="closeSidebar()"
           >
-            <span class="menu-icon">
-              ♟
-            </span>
-
-            <span>
-              Personeller
-            </span>
+            <span class="menu-icon">♟</span>
+            <span>Personeller</span>
           </a>
 
           <a
@@ -228,13 +189,8 @@
             routerLinkActive="active"
             (click)="closeSidebar()"
           >
-            <span class="menu-icon">
-              ⊕
-            </span>
-
-            <span>
-              Personel Ekle
-            </span>
+            <span class="menu-icon">⊕</span>
+            <span>Personel Ekle</span>
           </a>
 
           <a
@@ -242,24 +198,15 @@
             routerLinkActive="active"
             (click)="closeSidebar()"
           >
-            <span class="menu-icon">
-              ⚙️
-            </span>
-
-            <span>
-              Şirket Modül Ayarları
-            </span>
+            <span class="menu-icon">⚙️</span>
+            <span>Şirket Modül Ayarları</span>
           </a>
-
         }
-
       }
-
     </nav>
 
-
+    <!-- SOL ALT KULLANICI KARTI & ÇIKIŞ BUTONU -->
     <div class="sidebar-user">
-
       <div class="user-avatar">
         {{ userInitial }}
       </div>
@@ -283,12 +230,10 @@
       >
         ↪
       </button>
-
     </div>
-
   </aside>
 
-
+  <!-- MOBİL MENÜ KARARTMA (OVERLAY) -->
   @if (sidebarOpen) {
     <button
       class="sidebar-overlay"
@@ -298,11 +243,9 @@
     ></button>
   }
 
-
+  <!-- SAĞ İÇERİK ALANI & TOPBAR -->
   <div class="page-wrapper">
-
     <header class="topbar">
-
       <button
         class="menu-button"
         type="button"
@@ -323,7 +266,6 @@
       </div>
 
       <div class="topbar-user">
-
         <div class="topbar-user-text">
           <strong>
             {{ displayName }}
@@ -337,16 +279,11 @@
         <div class="topbar-avatar">
           {{ userInitial }}
         </div>
-
       </div>
-
     </header>
-
 
     <main class="page-content">
       <router-outlet />
     </main>
-
   </div>
-
 </div>

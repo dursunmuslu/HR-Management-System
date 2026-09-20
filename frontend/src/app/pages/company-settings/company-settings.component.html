@@ -1,34 +1,95 @@
-<div class="module-container">
-  <div class="header-box">
+<div class="settings-page-container">
+  <div class="page-header">
     <div>
-      <h2>⚙️ Şirket Modül Ayarları</h2>
-      <p>Sol menüde hangi sekmelerin görüneceğini buradan açıp kapatabilirsiniz.</p>
+      <span class="eyebrow">ŞİRKET VE OPERASYON</span>
+      <h2>Şirket Modül Ayarları</h2>
+      <p>Şirket personellerinin erişebileceği modülleri ve operasyonel özellikleri buradan açıp kapatabilirsiniz.</p>
     </div>
+    <button class="btn-save" [disabled]="isSaving" (click)="saveSettings()">
+      <span>💾</span> {{ isSaving ? 'Kaydediliyor...' : 'Ayarları Kaydet' }}
+    </button>
   </div>
 
-  <div class="card settings-list">
-    <div class="setting-item">
-      <div>
-        <strong>📢 Şirket İçi Genel Duyurular</strong>
-        <p>Sol menüde Duyurular panosunu gösterir.</p>
+  @if (statusMessage) {
+    <div class="alert" [class.alert-success]="isSuccess" [class.alert-error]="!isSuccess">
+      {{ statusMessage }}
+    </div>
+  }
+
+  <div class="modules-grid">
+    <!-- 1. Değerlendirme Sınavları / Quiz Modülü -->
+    <div class="module-card">
+      <div class="module-info">
+        <div class="icon-box purple">📑</div>
+        <div>
+          <h3>Değerlendirme Quizleri & Sınavlar</h3>
+          <p>Kapatıldığında şirket personellerinin sol menüsünden quiz alanı kaldırılır ve sınav çözemezler.</p>
+        </div>
       </div>
-      <input type="checkbox" [(ngModel)]="cfgAnnouncements" (change)="saveConfig()" class="toggle">
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="settings.is_quizzes_enabled">
+        <span class="slider"></span>
+      </label>
     </div>
 
-    <div class="setting-item">
-      <div>
-        <strong>📝 Değerlendirme & Yetkinlik Quizleri</strong>
-        <p>Sol menüde Sınav ve Quizler sekmesini gösterir (İstemiyorsanız kapatın).</p>
+    <!-- 2. Vardiya ve Mola Yönetimi Modülü -->
+    <div class="module-card">
+      <div class="module-info">
+        <div class="icon-box blue">⏰</div>
+        <div>
+          <h3>Vardiya & Mola Takvimi</h3>
+          <p>Kapatıldığında çalışanların günlük/haftalık mola ve mesai takip ekranı sol menüden gizlenir.</p>
+        </div>
       </div>
-      <input type="checkbox" [(ngModel)]="cfgQuizzes" (change)="saveConfig()" class="toggle">
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="settings.is_shifts_enabled">
+        <span class="slider"></span>
+      </label>
     </div>
 
-    <div class="setting-item">
-      <div>
-        <strong>⏰ Vardiya ve Mola Çizelgesi</strong>
-        <p>Sol menüde personelin mola saatlerini görmesini sağlayan sekmeyi gösterir.</p>
+    <!-- 3. Puantaj ve Anket Performansı Modülü (YENİ) -->
+    <div class="module-card">
+      <div class="module-info">
+        <div class="icon-box indigo" style="background: #e0e7ff; color: #4338ca;">⏱️</div>
+        <div>
+          <h3>Puantaj, Eksik Login & Anket Puanları</h3>
+          <p>Kapatıldığında personellerin eksik sürelerini ve aylık anket başarı puanlarını gördüğü ekran menüden gizlenir.</p>
+        </div>
       </div>
-      <input type="checkbox" [(ngModel)]="cfgShifts" (change)="saveConfig()" class="toggle">
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="settings.is_timesheets_enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- 4. Şirket İçi Duyurular Modülü -->
+    <div class="module-card">
+      <div class="module-info">
+        <div class="icon-box amber">📢</div>
+        <div>
+          <h3>Şirket İçi Duyurular</h3>
+          <p>Kapatıldığında personeller şirket panosundaki duyurular menüsüne erişemez.</p>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="settings.is_announcements_enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- 5. İzin Talepleri Modülü -->
+    <div class="module-card">
+      <div class="module-info">
+        <div class="icon-box green">📋</div>
+        <div>
+          <h3>İzin Yönetimi & Talepler</h3>
+          <p>Kapatıldığında personellerin yıllık/mazeret izni talep etme ekranı devre dışı kalır.</p>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="settings.is_leaves_enabled">
+        <span class="slider"></span>
+      </label>
     </div>
   </div>
 </div>

@@ -1,645 +1,164 @@
-<section class="dashboard-page">
-
-  <header class="page-header">
+<div class="dashboard-container">
+  <!-- HOŞ GELDİN KARTI -->
+  <header class="welcome-banner">
     <div>
-      <p class="page-eyebrow">
-        Genel Bakış
-      </p>
-
-      <h1>
-        Hoş geldin, {{ username }}
-      </h1>
-
-      <p class="page-description">
-        @if (isManager) {
-          Personel, izin süreçleri ve şirket içi operasyonların güncel durumunu buradan takip edebilirsin.
-        } @else {
-          Kalan izin hakkını, aktif şirket duyurularını ve değerlendirme görevlerini buradan takip edebilirsin.
-        }
-      </p>
+      <span class="badge-role">{{ user?.role === 'YONETICI' ? 'ŞİRKET YÖNETİCİSİ' : (user?.role === 'TAKIM_LIDERI' ? 'TAKIM LİDERİ' : 'PERSONEL KOKPİTİ') }}</span>
+      <h1>Merhaba, {{ user?.username || 'Kullanıcı' }} 👋</h1>
+      <p>Bugünkü operasyonel durumunuz, çalışma takviminiz ve performans özetiniz aşağıda listelenmiştir.</p>
     </div>
-
-    @if (isEmployee) {
-      <a
-        class="primary-action"
-        routerLink="/leaves/create"
-      >
-        <span>＋</span>
-        Yeni izin talebi
-      </a>
-    }
-
-    @if (isManager) {
-      <a
-        class="primary-action"
-        routerLink="/leave-requests"
-      >
-        <span>✓</span>
-        İzin taleplerini yönet
-      </a>
-    }
+    <div class="date-badge">
+      <span>📅 Bugün</span>
+      <strong>{{ stats.nextShift?.shift_date || 'Aktif Dönem' }}</strong>
+    </div>
   </header>
 
-  <!-- DİNAMİK BİLGİLENDİRME ŞERİDİ (DUYURU & QUIZ UYARISI) -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
-
-    <!-- Quiz Görev Uyarısı -->
-    <div style="background: linear-gradient(135deg, #fef3c7, #fffbeb); border: 1px solid #fde68a; border-radius: 16px; padding: 18px; display: flex; align-items: center; justify-content: space-between;">
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="font-size: 28px;">📝</span>
+  <!-- ÖZET METRİK KARTLARI (YÖNETİCİ VEYA PERSONEL) -->
+  <div class="metrics-grid">
+    @if (isManager) {
+      <div class="metric-card">
+        <div class="icon-box blue">👥</div>
         <div>
-          <strong style="color: #92400e; font-size: 14px; display: block;">Bekleyen Değerlendirme</strong>
-          <small style="color: #b45309; font-size: 12px;">İSG ve Bilgi Güvenliği quizi çözümünüzü bekliyor.</small>
+          <span class="label">Toplam Personel</span>
+          <strong class="val">{{ stats.totalEmployees }}</strong>
+          <small class="sub text-green">✓ {{ stats.activeEmployees }} Aktif Çalışan</small>
         </div>
       </div>
-      <a routerLink="/quizzes" style="background: #d97706; color: white; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;">
-        Quize Git →
-      </a>
-    </div>
 
-    <!-- Mesai & Vardiya Bilgisi -->
-    <div style="background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #bfdbfe; border-radius: 16px; padding: 18px; display: flex; align-items: center; justify-content: space-between;">
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="font-size: 28px;">⏰</span>
+      <div class="metric-card">
+        <div class="icon-box amber">📋</div>
         <div>
-          <strong style="color: #1e40af; font-size: 14px; display: block;">Bugünkü Çalışma Düzeni</strong>
-          <small style="color: #3b82f6; font-size: 12px;">Mesai: 09:00 - 18:00 | Öğle Molası: 12:30 - 13:00</small>
+          <span class="label">Bekleyen İzin Onayı</span>
+          <strong class="val">{{ stats.pendingLeaves }}</strong>
+          <small class="sub"><a routerLink="/leave-requests">Onaylara Git →</a></small>
         </div>
       </div>
-      <a routerLink="/shifts" style="background: #2563eb; color: white; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;">
-        Çizelge →
-      </a>
-    </div>
+    } @else {
+      <div class="metric-card">
+        <div class="icon-box green">🏖️</div>
+        <div>
+          <span class="label">Kalan İzin Hakkım</span>
+          <strong class="val">{{ stats.remainingLeaveDays }} Gün</strong>
+          <small class="sub"><a routerLink="/leaves/create">+ Yeni Talep Aç</a></small>
+        </div>
+      </div>
+    }
 
+    <!-- PUANTAJ VE EKSİK SÜRE WIDGET (MODÜL AÇIKSA GÖRÜNÜR) -->
+    @if (showTimesheets) {
+      <div class="metric-card">
+        <div class="icon-box red">⏱️</div>
+        <div>
+          <span class="label">{{ isManager ? 'Şirket Eksik Login' : 'Eksik Login Sürem' }}</span>
+          <strong class="val text-red">{{ formatMinutes(stats.totalMissingMinutes) }}</strong>
+          <small class="sub text-green">+{{ formatMinutes(stats.totalOvertimeMinutes) }} Fazla Mesai</small>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="icon-box indigo">⭐</div>
+        <div>
+          <span class="label">{{ isManager ? 'Ortalama Anket Skoru' : 'Anket Başarı Puanım' }}</span>
+          <strong class="val" [class.text-green]="stats.averageSurveyScore >= stats.targetSurveyScore" [class.text-amber]="stats.averageSurveyScore < stats.targetSurveyScore">
+            {{ stats.averageSurveyScore > 0 ? stats.averageSurveyScore : '88.5' }} Puan
+          </strong>
+          <small class="sub">Hedef: {{ stats.targetSurveyScore }} Puan</small>
+        </div>
+      </div>
+    }
   </div>
 
-  @if (errorMessage) {
-    <div
-      class="error-alert"
-      role="alert"
-    >
-      <div>
-        <strong>
-          Veriler yüklenemedi
-        </strong>
+  <!-- ALT PANEL: SABİTLENMİŞ DUYURU & GÜNLÜK VARDİYA BİLGİSİ -->
+  <div class="content-split-grid">
 
-        <p>
-          {{ errorMessage }}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        (click)="loadDashboard()"
-      >
-        Tekrar dene
-      </button>
-    </div>
-  }
-
-  @if (isLoading) {
-    <div class="loading-grid">
-      @for (
-        item of [1, 2, 3, 4];
-        track item
-      ) {
-        <div class="skeleton-card">
-          <div
-            class="skeleton skeleton-icon"
-          ></div>
-
-          <div
-            class="skeleton skeleton-line"
-          ></div>
-
-          <div
-            class="skeleton skeleton-number"
-          ></div>
+    <!-- 1. ŞİRKET PANOSU / DUYURULAR (Modül Açıksa) -->
+    @if (showAnnouncements) {
+      <div class="panel-card announcement-panel">
+        <div class="panel-header">
+          <h3>📢 Şirket İçi Duyuru</h3>
+          <a routerLink="/announcements" class="link-all">Tümü →</a>
         </div>
+
+        @if (stats.pinnedAnnouncement) {
+          <div class="announcement-item">
+            <div class="ann-top">
+              <span class="ann-cat">{{ stats.pinnedAnnouncement.category || 'Duyuru' }}</span>
+              @if (stats.pinnedAnnouncement.is_pinned) {
+                <span class="ann-pinned">📌 Başa Sabitlendi</span>
+              }
+            </div>
+            <h4>{{ stats.pinnedAnnouncement.title }}</h4>
+            <p>{{ stats.pinnedAnnouncement.content }}</p>
+            <div class="ann-meta">
+              <small>Paylaşan: {{ stats.pinnedAnnouncement.author_name }}</small>
+              <small>{{ stats.pinnedAnnouncement.created_at | date:'dd.MM.yyyy HH:mm' }}</small>
+            </div>
+          </div>
+        } @else {
+          <div class="empty-panel">Henüz yayınlanmış bir duyuru bulunmuyor.</div>
+        }
+      </div>
+    }
+
+    <!-- 2. GÜNLÜK VARDİYA & MOLA BİLGİSİ (Modül Açıksa) -->
+    @if (showShifts) {
+      <div class="panel-card shift-panel">
+        <div class="panel-header">
+          <h3>⏰ Günlük Mesai & Mola Saatleri</h3>
+          <a routerLink="/shifts" class="link-all">Çizelge →</a>
+        </div>
+
+        <div class="shift-summary-box">
+          <div class="shift-hours">
+            <div>
+              <small>Mesai Başlangıç</small>
+              <strong>{{ stats.nextShift?.start_time || '09:00' }}</strong>
+            </div>
+            <span class="arrow">➔</span>
+            <div>
+              <small>Mesai Bitiş</small>
+              <strong>{{ stats.nextShift?.end_time || '18:00' }}</strong>
+            </div>
+          </div>
+
+          <div class="breaks-list">
+            <div class="break-pill">
+              <span>☕ 1. Çay</span>
+              <strong>{{ stats.nextShift?.break_1 || '10:30 - 10:45' }}</strong>
+            </div>
+            <div class="break-pill lunch">
+              <span>🍽️ Yemek</span>
+              <strong>{{ stats.nextShift?.lunch_break || '12:30 - 13:00' }}</strong>
+            </div>
+            <div class="break-pill">
+              <span>☕ 2. Çay</span>
+              <strong>{{ stats.nextShift?.break_2 || '15:00 - 15:15' }}</strong>
+            </div>
+            <div class="break-pill">
+              <span>☕ 3. Çay</span>
+              <strong>{{ stats.nextShift?.break_3 || '16:45 - 17:00' }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- HIZLI ERİŞİM BUTONLARI (KAPALI MODÜLLER GÖZÜKMEZ) -->
+  <div class="quick-actions-bar">
+    <span class="qa-title">Hızlı İşlemler:</span>
+    <div class="qa-buttons">
+      @if (showLeaves) {
+        <a routerLink="/leaves/create" class="qa-btn">🏖️ İzin Talebi Aç</a>
+      }
+      @if (showTimesheets) {
+        <a routerLink="/timesheets" class="qa-btn">⏱️ Puantajımı İncele</a>
+      }
+      @if (showQuizzes) {
+        <a routerLink="/quizzes" class="qa-btn">📑 Aktif Sınavlarım</a>
+      }
+      @if (isManager) {
+        <a routerLink="/company-settings" class="qa-btn manager-btn">⚙️ Şirket Modül Ayarları</a>
       }
     </div>
-  }
-
-  @if (
-    !isLoading &&
-    isManager &&
-    summary
-  ) {
-    <div class="statistics-grid">
-
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon employees">
-            ♟
-          </span>
-
-          <span class="stat-badge">
-            Toplam
-          </span>
-        </div>
-
-        <p>
-          Toplam personel
-        </p>
-
-        <h2>
-          {{ summary.total_employees }}
-        </h2>
-
-        <span class="stat-note">
-          Sisteme kayıtlı personel sayısı
-        </span>
-      </article>
-
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon requests">
-            ▤
-          </span>
-
-          <span class="stat-badge">
-            Tüm talepler
-          </span>
-        </div>
-
-        <p>
-          İzin talepleri
-        </p>
-
-        <h2>
-          {{ summary.total_leave_requests }}
-        </h2>
-
-        <span class="stat-note">
-          Oluşturulan toplam izin talebi
-        </span>
-      </article>
-
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon pending">
-            ◷
-          </span>
-
-          @if (
-            summary.pending_leave_requests >
-            0
-          ) {
-            <span
-              class="stat-badge warning"
-            >
-              İşlem bekliyor
-            </span>
-          } @else {
-            <span
-              class="stat-badge success"
-            >
-              Güncel
-            </span>
-          }
-        </div>
-
-        <p>
-          Bekleyen talepler
-        </p>
-
-        <h2>
-          {{
-            summary
-              .pending_leave_requests
-          }}
-        </h2>
-
-        <span class="stat-note">
-          Yönetici onayı bekleyen talepler
-        </span>
-      </article>
-
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon balance">
-            %
-          </span>
-
-          <span class="stat-badge">
-            Oran
-          </span>
-        </div>
-
-        <p>
-          İzin onay oranı
-        </p>
-
-        <h2>
-          %{{ approvalRate }}
-        </h2>
-
-        <span class="stat-note">
-          Sonuçlandırılan talepler içindeki
-          onay oranı
-        </span>
-      </article>
-
-    </div>
-
-    <div class="dashboard-content">
-
-      <section class="status-panel">
-        <div class="section-heading">
-          <div>
-            <p>
-              İzin Analizi
-            </p>
-
-            <h2>
-              Talep durumları
-            </h2>
-          </div>
-
-          <span class="approval-rate">
-            %{{ approvalRate }} onay oranı
-          </span>
-        </div>
-
-        <div class="status-list">
-
-          <div class="status-row">
-            <div class="status-label">
-              <span
-                class="status-dot approved"
-              ></span>
-
-              <div>
-                <strong>
-                  Onaylanan
-                </strong>
-
-                <small>
-                  Başarıyla onaylanan izinler
-                </small>
-              </div>
-            </div>
-
-            <span
-              class="status-value approved"
-            >
-              {{
-                summary
-                  .approved_leave_requests
-              }}
-            </span>
-          </div>
-
-          <div class="status-row">
-            <div class="status-label">
-              <span
-                class="status-dot pending"
-              ></span>
-
-              <div>
-                <strong>
-                  Bekleyen
-                </strong>
-
-                <small>
-                  Henüz sonuçlandırılmayan
-                  izinler
-                </small>
-              </div>
-            </div>
-
-            <span
-              class="status-value pending"
-            >
-              {{
-                summary
-                  .pending_leave_requests
-              }}
-            </span>
-          </div>
-
-          <div class="status-row">
-            <div class="status-label">
-              <span
-                class="status-dot rejected"
-              ></span>
-
-              <div>
-                <strong>
-                  Reddedilen
-                </strong>
-
-                <small>
-                  Yönetici tarafından reddedilen
-                  izinler
-                </small>
-              </div>
-            </div>
-
-            <span
-              class="status-value rejected"
-            >
-              {{
-                summary
-                  .rejected_leave_requests
-              }}
-            </span>
-          </div>
-
-          <div class="status-row">
-            <div class="status-label">
-              <span
-                class="status-dot cancelled"
-              ></span>
-
-              <div>
-                <strong>
-                  İptal edilen
-                </strong>
-
-                <small>
-                  Personel tarafından iptal edilen
-                  izinler
-                </small>
-              </div>
-            </div>
-
-            <span
-              class="status-value cancelled"
-            >
-              {{
-                summary
-                  .cancelled_leave_requests
-              }}
-            </span>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- SAĞ PANEL: DUYURULAR VİTRİNİ & HIZLI İŞLEMLER -->
-      <aside class="quick-actions">
-        <div class="section-heading">
-          <div>
-            <p>
-              Şirket Gündemi
-            </p>
-
-            <h2>
-              📢 Son Duyurular
-            </h2>
-          </div>
-          <a routerLink="/announcements" style="font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: none;">Tümü →</a>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
-          <div style="background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb;">
-            <strong style="font-size: 13px; color: #0f172a; display: block;">Cumhuriyet Bayramı ve İdari İzin</strong>
-            <small style="color: #64748b; font-size: 11px;">29 Ekim resmi tatil planlaması panoya eklenmiştir.</small>
-          </div>
-          <div style="background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #10b981;">
-            <strong style="font-size: 13px; color: #0f172a; display: block;">Yemekhane ve Servis Güncellemesi</strong>
-            <small style="color: #64748b; font-size: 11px;">Eylül ayı yeni servis güzergahları aktif edilmiştir.</small>
-          </div>
-        </div>
-
-        <div class="section-heading">
-          <div>
-            <p>
-              Hızlı İşlemler
-            </p>
-
-            <h2>
-              Yönetici işlemleri
-            </h2>
-          </div>
-        </div>
-
-        <div class="action-list">
-
-          <a routerLink="/leave-requests">
-            <span class="action-icon orange">
-              ✓
-            </span>
-
-            <div>
-              <strong>
-                İzin talepleri
-              </strong>
-
-              <small>
-                İzin taleplerini değerlendir
-              </small>
-            </div>
-
-            <span class="action-arrow">
-              →
-            </span>
-          </a>
-
-          <a routerLink="/employees">
-            <span class="action-icon green">
-              ♟
-            </span>
-
-            <div>
-              <strong>
-                Personelleri yönet
-              </strong>
-
-              <small>
-                Personel kayıtlarını görüntüle
-              </small>
-            </div>
-
-            <span class="action-arrow">
-              →
-            </span>
-          </a>
-
-          <a routerLink="/company-settings">
-            <span class="action-icon violet">
-              ⚙️
-            </span>
-
-            <div>
-              <strong>
-                Modül Ayarları
-              </strong>
-
-              <small>
-                Menü ve şirket ayarları
-              </small>
-            </div>
-
-            <span class="action-arrow">
-              →
-            </span>
-          </a>
-
-        </div>
-      </aside>
-
-    </div>
-  }
-
-  @if (
-    !isLoading &&
-    isEmployee &&
-    leaveBalance
-  ) {
-    <div class="statistics-grid">
-
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon balance">
-            ◈
-          </span>
-
-          <span class="stat-badge">
-            Gün
-          </span>
-        </div>
-
-        <p>
-          Kalan yıllık iznim
-        </p>
-
-        <h2>
-          {{ remainingAnnualLeave }}
-        </h2>
-
-        <span class="stat-note">
-          Kullanabileceğin yıllık izin hakkı
-        </span>
-      </article>
-
-    </div>
-
-    <div class="dashboard-content">
-
-      <section class="status-panel">
-        <div class="section-heading">
-          <div>
-            <p>
-              İzin Bilgisi
-            </p>
-
-            <h2>
-              Kişisel izin durumun
-            </h2>
-          </div>
-        </div>
-
-        <div class="status-list">
-
-          <div class="status-row">
-            <div class="status-label">
-              <span
-                class="status-dot approved"
-              ></span>
-
-              <div>
-                <strong>
-                  Kalan izin
-                </strong>
-
-                <small>
-                  Kullanabileceğin yıllık izin
-                </small>
-              </div>
-            </div>
-
-            <span
-              class="status-value approved"
-            >
-              {{ remainingAnnualLeave }} gün
-            </span>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- PERSONEL İÇİN DUYURULAR VE İŞLEMLER -->
-      <aside class="quick-actions">
-        <div class="section-heading">
-          <div>
-            <p>
-              Şirket Panosu
-            </p>
-
-            <h2>
-              📢 Duyurular
-            </h2>
-          </div>
-          <a routerLink="/announcements" style="font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: none;">Tümü →</a>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
-          <div style="background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb;">
-            <strong style="font-size: 13px; color: #0f172a; display: block;">Cumhuriyet Bayramı Tatili</strong>
-            <small style="color: #64748b; font-size: 11px;">28 Ekim 13:00 sonrası şirketimiz idari izinlidir.</small>
-          </div>
-        </div>
-
-        <div class="section-heading">
-          <div>
-            <p>
-              Hızlı İşlemler
-            </p>
-
-            <h2>
-              İzin işlemleri
-            </h2>
-          </div>
-        </div>
-
-        <div class="action-list">
-
-          <a routerLink="/leaves/create">
-            <span class="action-icon blue">
-              ＋
-            </span>
-
-            <div>
-              <strong>
-                İzin talebi oluştur
-              </strong>
-
-              <small>
-                Yeni bir izin talebi gönder
-              </small>
-            </div>
-
-            <span class="action-arrow">
-              →
-            </span>
-          </a>
-
-          <a routerLink="/leaves/my">
-            <span class="action-icon violet">
-              ▤
-            </span>
-
-            <div>
-              <strong>
-                İzinlerimi görüntüle
-              </strong>
-
-              <small>
-                Geçmiş izin taleplerini incele
-              </small>
-            </div>
-
-            <span class="action-arrow">
-              →
-            </span>
-          </a>
-
-        </div>
-      </aside>
-
-    </div>
-  }
-
-</section>
+  </div>
+</div>

@@ -12,6 +12,7 @@
   background: #f4f7fb;
 }
 
+/* ================= SIDEBAR ================= */
 .sidebar {
   position: fixed;
   z-index: 1000;
@@ -63,16 +64,16 @@
 .brand-text {
   display: grid;
   gap: 3px;
-}
 
-.brand-text strong {
-  color: #ffffff;
-  font-size: 15px;
-}
+  strong {
+    color: #ffffff;
+    font-size: 15px;
+  }
 
-.brand-text small {
-  color: #94a3b8;
-  font-size: 11px;
+  small {
+    color: #94a3b8;
+    font-size: 11px;
+  }
 }
 
 .sidebar-close {
@@ -97,10 +98,10 @@
   font-weight: 800;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-}
 
-.navigation-title:first-child {
-  margin-top: 2px;
+  &:first-child {
+    margin-top: 2px;
+  }
 }
 
 .navigation a {
@@ -117,22 +118,22 @@
     color 150ms ease,
     background 150ms ease,
     transform 150ms ease;
-}
 
-.navigation a:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.07);
-  transform: translateX(2px);
-}
+  &:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.07);
+    transform: translateX(2px);
+  }
 
-.navigation a.active {
-  color: #ffffff;
-  background: linear-gradient(
-    135deg,
-    rgba(37, 99, 235, 0.95),
-    rgba(67, 56, 202, 0.95)
-  );
-  box-shadow: 0 11px 24px rgba(37, 99, 235, 0.22);
+  &.active {
+    color: #ffffff;
+    background: linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.95),
+      rgba(67, 56, 202, 0.95)
+    );
+    box-shadow: 0 11px 24px rgba(37, 99, 235, 0.22);
+  }
 }
 
 .menu-icon {
@@ -173,19 +174,19 @@
   min-width: 0;
   flex: 1;
   gap: 3px;
-}
 
-.user-information strong {
-  overflow: hidden;
-  color: #ffffff;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  strong {
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.user-information span {
-  color: #94a3b8;
-  font-size: 11px;
+  span {
+    color: #94a3b8;
+    font-size: 11px;
+  }
 }
 
 .sidebar-logout {
@@ -199,13 +200,15 @@
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
   font-size: 18px;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #ffffff;
+    background: rgba(239, 68, 68, 0.25);
+  }
 }
 
-.sidebar-logout:hover {
-  color: #ffffff;
-  background: rgba(239, 68, 68, 0.25);
-}
-
+/* ================= PAGE WRAPPER & TOPBAR ================= */
 .page-wrapper {
   min-height: 100vh;
   margin-left: 276px;
@@ -229,7 +232,7 @@
   display: none;
   width: 42px;
   height: 42px;
-  border: 1px solid #dce3ed;
+  border: 1px solid #dce3ec;
   border-radius: 11px;
   color: #334155;
   background: #ffffff;
@@ -241,16 +244,16 @@
   display: grid;
   flex: 1;
   gap: 4px;
-}
 
-.topbar-title strong {
-  color: #0f172a;
-  font-size: 15px;
-}
+  strong {
+    color: #0f172a;
+    font-size: 15px;
+  }
 
-.topbar-title span {
-  color: #94a3b8;
-  font-size: 12px;
+  span {
+    color: #94a3b8;
+    font-size: 12px;
+  }
 }
 
 .topbar-user {
@@ -263,16 +266,16 @@
   display: grid;
   gap: 3px;
   text-align: right;
-}
 
-.topbar-user-text strong {
-  color: #1e293b;
-  font-size: 13px;
-}
+  strong {
+    color: #1e293b;
+    font-size: 13px;
+  }
 
-.topbar-user-text span {
-  color: #94a3b8;
-  font-size: 11px;
+  span {
+    color: #94a3b8;
+    font-size: 11px;
+  }
 }
 
 .topbar-avatar {
@@ -289,14 +292,15 @@
   display: none;
 }
 
+/* ================= RESPONSIVE DESIGN ================= */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 220ms ease;
-  }
 
-  .sidebar.sidebar-open {
-    transform: translateX(0);
+    &.sidebar-open {
+      transform: translateX(0);
+    }
   }
 
   .sidebar-close {

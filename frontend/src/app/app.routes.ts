@@ -23,6 +23,7 @@ import { QuizListComponent } from './pages/quiz/quiz-list.component';
 import { ShiftScheduleComponent } from './pages/shift/shift-schedule.component';
 import { AnnouncementsComponent } from './pages/announcements/announcements.component';
 import { CompanySettingsComponent } from './pages/company-settings/company-settings.component';
+import { TimesheetsComponent } from './pages/timesheets/timesheets.component';
 
 // Modül kapalıysa Dashboard'a yönlendiren fonksiyonel Guard'lar
 const quizFeatureGuard = () => {
@@ -40,6 +41,12 @@ const shiftFeatureGuard = () => {
 const announcementFeatureGuard = () => {
   const router = inject(Router);
   const isEnabled = localStorage.getItem('cfg_show_announcements') !== 'false';
+  return isEnabled ? true : router.createUrlTree(['/dashboard']);
+};
+
+const timesheetFeatureGuard = () => {
+  const router = inject(Router);
+  const isEnabled = localStorage.getItem('cfg_show_timesheets') !== 'false';
   return isEnabled ? true : router.createUrlTree(['/dashboard']);
 };
 
@@ -69,7 +76,7 @@ export const routes: Routes = [
         canActivate: [companyUserGuard]
       },
 
-      // Operasyon, Duyuru & Çalışma Modülleri (Ayarlarla Korunan Rotalar)
+      // Operasyon, Duyuru & Çalışma Modülleri (Modül Guard'larıyla Tam Korumalı)
       {
         path: 'announcements',
         component: AnnouncementsComponent,
@@ -84,6 +91,11 @@ export const routes: Routes = [
         path: 'shifts',
         component: ShiftScheduleComponent,
         canActivate: [companyUserGuard, shiftFeatureGuard]
+      },
+      {
+        path: 'timesheets',
+        component: TimesheetsComponent,
+        canActivate: [companyUserGuard, timesheetFeatureGuard]
       },
 
       // İzin İşlemleri

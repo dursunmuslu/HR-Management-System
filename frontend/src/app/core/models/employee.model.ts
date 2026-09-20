@@ -1,5 +1,6 @@
 export type EmployeeRole =
   | 'PERSONEL'
+  | 'TAKIM_LIDERI'
   | 'YONETICI'
   | 'PLATFORM_OWNER';
 
@@ -36,7 +37,7 @@ export interface EmployeeTeam {
   name: string;
   is_active: boolean;
 
-  department: EmployeeDepartment;
+  department?: EmployeeDepartment;
 }
 
 

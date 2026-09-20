@@ -3,11 +3,10 @@
     <div>
       <p class="page-eyebrow">Yönetici İşlemleri</p>
       <h1>Personeller</h1>
-      <p>Sisteme kayıtlı personelleri görüntüleyebilir, Excel ile toplu yükleyebilir ve yönetebilirsin.</p>
+      <p>Sisteme kayıtlı personelleri, takım liderlerini ve departmanları görüntüleyebilirsin.</p>
     </div>
 
     <div class="header-action-group" style="display: flex; gap: 10px; align-items: center;">
-      <!-- Excel Butonu -->
       <input type="file" #excelInput (change)="onExcelSelected($event)" accept=".xlsx,.csv" style="display: none" />
       <button
         type="button"
@@ -44,7 +43,8 @@
     </div>
   }
 
-  <div class="summary-grid">
+  <!-- Üst Sayaç Grid (Takım Lideri Dahil 5 Kolon) -->
+  <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
     <article>
       <span class="summary-icon total">♟</span>
       <div>
@@ -56,8 +56,16 @@
     <article>
       <span class="summary-icon active">✓</span>
       <div>
-        <p>Aktif personel</p>
+        <p>Aktif</p>
         <strong>{{ activeCount }}</strong>
+      </div>
+    </article>
+
+    <article>
+      <span class="summary-icon manager" style="background: #eef2ff; color: #4338ca;">👑</span>
+      <div>
+        <p>Takım Lideri</p>
+        <strong>{{ leaderCount }}</strong>
       </div>
     </article>
 
@@ -86,13 +94,15 @@
           type="search"
           [(ngModel)]="searchText"
           (ngModelChange)="applyFilters()"
-          placeholder="İsim, e-posta veya departman ara"
+          placeholder="İsim, e-posta, departman veya takım ara"
         >
       </div>
 
+      <!-- Filtre Dropdown -->
       <select [(ngModel)]="selectedRole" (ngModelChange)="applyFilters()">
         <option value="TUMU">Tüm roller</option>
         <option value="PERSONEL">Personel</option>
+        <option value="TAKIM_LIDERI">Takım Lideri</option>
         <option value="YONETICI">Yönetici</option>
       </select>
     </div>
@@ -111,7 +121,7 @@
       <div class="empty-state">
         <span>♟</span>
         <h2>Personel bulunamadı</h2>
-        <p>Arama veya filtre kriterlerine uygun kayıt bulunmuyor.</p>
+        <p>Arama kriterlerine uygun kayıt bulunmuyor.</p>
         <a routerLink="/employees/create">Yeni personel ekle</a>
       </div>
     } @else {
@@ -121,9 +131,10 @@
             <tr>
               <th>Personel</th>
               <th>Departman</th>
+              <th>Takım</th>
               <th>Pozisyon</th>
               <th>Rol</th>
-              <th>İzin bakiyesi</th>
+              <th>İzin Bakiyesi</th>
               <th>Durum</th>
               <th class="actions-heading">İşlem</th>
             </tr>
@@ -134,21 +145,27 @@
               <tr>
                 <td>
                   <div class="employee-cell">
-                    <span class="avatar">{{ getInitials(employee) }}</span>
+                    <span class="avatar" [style.background]="getEmployeeRole(employee) === 'TAKIM_LIDERI' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : ''">
+                      {{ getInitials(employee) }}
+                    </span>
                     <div>
                       <strong>{{ getFullName(employee) }}</strong>
                       <small>{{ employee.email }}</small>
-                      @if (employee.username) {
-                        <small>&#64;{{ employee.username }}</small>
-                      }
+                      <small>&#64;{{ employee.username || employee.email?.split('@')[0] }}</small>
                     </div>
                   </div>
                 </td>
 
                 <td>{{ employee.department || '-' }}</td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">
+                    {{ getTeamName(employee) }}
+                  </span>
+                </td>
                 <td>{{ employee.position || '-' }}</td>
 
                 <td>
+                  <!-- 3 Rolü de İçeren Seçim Kutusu -->
                   <select
                     class="role-select"
                     [value]="getEmployeeRole(employee)"
@@ -156,6 +173,7 @@
                     (change)="changeRole(employee, $event)"
                   >
                     <option value="PERSONEL">Personel</option>
+                    <option value="TAKIM_LIDERI">Takım Lideri</option>
                     <option value="YONETICI">Yönetici</option>
                   </select>
 
