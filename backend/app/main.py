@@ -40,8 +40,14 @@ def init_db():
         with engine.connect() as connection:
             with connection.begin():
                 connection.execute(text("DROP TABLE IF EXISTS teams CASCADE;"))
+                # Mevcut şirket tablosuna eksik modül kolonlarını güvenli şekilde ekle
+                connection.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_announcements_enabled BOOLEAN DEFAULT TRUE;"))
+                connection.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_quizzes_enabled BOOLEAN DEFAULT TRUE;"))
+                connection.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_shifts_enabled BOOLEAN DEFAULT TRUE;"))
+                connection.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_leaves_enabled BOOLEAN DEFAULT TRUE;"))
+                connection.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_timesheets_enabled BOOLEAN DEFAULT TRUE;"))
     except Exception as e:
-        print(f"Tablo temizleme notu: {e}")
+        print(f"Tablo guncelleme/temizleme notu: {e}")
 
     Base.metadata.create_all(bind=engine)
 
