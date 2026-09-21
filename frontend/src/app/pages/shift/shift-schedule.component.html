@@ -43,7 +43,7 @@
       <div class="card time-card">
         <div>
           <span class="label">Mesai Başlangıcı</span>
-          <h3 class="time">{{ todayShift?.start_time }}</h3>
+          <h3 class="time">{{ todayShift?.start_time || '09:00' }}</h3>
         </div>
         <div class="icon-bubble green">🟢</div>
       </div>
@@ -51,7 +51,7 @@
       <div class="card time-card">
         <div>
           <span class="label">Mesai Bitişi</span>
-          <h3 class="time">{{ todayShift?.end_time }}</h3>
+          <h3 class="time">{{ todayShift?.end_time || '18:00' }}</h3>
         </div>
         <div class="icon-bubble red">🔴</div>
       </div>
@@ -69,7 +69,7 @@
             <small>15 Dakika</small>
           </div>
         </div>
-        <span class="time-badge">{{ todayShift?.break_1 }}</span>
+        <span class="time-badge">{{ todayShift?.break_1 || '-' }}</span>
       </div>
 
       <div class="break-item food">
@@ -80,7 +80,7 @@
             <small>30 Dakika</small>
           </div>
         </div>
-        <span class="time-badge">{{ todayShift?.lunch_break }}</span>
+        <span class="time-badge">{{ todayShift?.lunch_break || '-' }}</span>
       </div>
 
       <div class="break-item primary">
@@ -91,7 +91,7 @@
             <small>15 Dakika</small>
           </div>
         </div>
-        <span class="time-badge">{{ todayShift?.break_2 }}</span>
+        <span class="time-badge">{{ todayShift?.break_2 || '-' }}</span>
       </div>
 
       <div class="break-item primary">
@@ -102,7 +102,7 @@
             <small>15 Dakika</small>
           </div>
         </div>
-        <span class="time-badge">{{ todayShift?.break_3 }}</span>
+        <span class="time-badge">{{ todayShift?.break_3 || '-' }}</span>
       </div>
     </div>
 
@@ -140,35 +140,37 @@
         {{ uploadStatusMessage }}
       </div>
 
-      <!-- Tablo -->
+      <!-- Tablo (Mobil Uyumlu Kaydırılabilir Kapsayıcı) -->
       <div class="card table-wrapper">
-        <table class="styled-table">
-          <thead>
-            <tr>
-              <th>Personel</th>
-              <th>Takım</th>
-              <th>Mesai Saatleri</th>
-              <th>Öğle Molası</th>
-              <th>Çay Molaları</th>
-              <th>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of dailyList">
-              <td class="bold-name">{{ item.full_name }}</td>
-              <td><span class="badge-team">{{ item.team_name }}</span></td>
-              <td><span class="badge-shift">{{ item.start_time }} - {{ item.end_time }}</span></td>
-              <td>{{ item.lunch_break }}</td>
-              <td>{{ item.break_1 }} | {{ item.break_2 }}</td>
-              <td>
-                <button class="btn-edit" (click)="openSingleEditModal(item)">✏️ Düzenle</button>
-              </td>
-            </tr>
-            <tr *ngIf="dailyList.length === 0">
-              <td colspan="6" class="empty-state">Seçilen tarihe ait vardiya kaydı bulunamadı.</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-responsive-container">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Personel</th>
+                <th>Takım</th>
+                <th>Mesai Saatleri</th>
+                <th>Öğle Molası</th>
+                <th>Çay Molaları</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of dailyList">
+                <td class="bold-name">{{ item.full_name }}</td>
+                <td><span class="badge-team">{{ item.team_name }}</span></td>
+                <td><span class="badge-shift">{{ item.start_time }} - {{ item.end_time }}</span></td>
+                <td>{{ item.lunch_break }}</td>
+                <td>{{ item.break_1 }} | {{ item.break_2 }}</td>
+                <td>
+                  <button class="btn-edit" (click)="openSingleEditModal(item)">✏️ Düzenle</button>
+                </td>
+              </tr>
+              <tr *ngIf="dailyList.length === 0">
+                <td colspan="6" class="empty-state">Seçilen tarihe ait vardiya kaydı bulunamadı.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </ng-container>
