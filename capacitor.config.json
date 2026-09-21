@@ -1,0 +1,5 @@
+{
+  "appId": "com.dursun.hrmanagement",
+  "appName": "HR Yonetim",
+  "webDir": "dist/hr-management-frontend/browser"
+}
